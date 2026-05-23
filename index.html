@@ -196,6 +196,14 @@
     .collapsible-header.open + .collapsible-content { max-height: 3000px; }
     .collapsible-header.open .arrow { transform: rotate(180deg); }
     .collapsible-inner { padding: 12px 0 4px; }
+    .collapsible-child .collapsible-header {
+      margin-left: 16px;
+      border-left: 2px solid #4a9ebb;
+      background: #0d2336;
+    }
+    .collapsible-child .collapsible-header:hover {
+      background: #102840;
+    }
     @media print {
       .collapsible-content { max-height: none !important; overflow: visible !important; }
       .collapsible-header.open + .collapsible-content { max-height: none !important; }
@@ -479,6 +487,9 @@
       var t = e.target;
       if (t.tagName === 'BUTTON' || (t.closest && t.closest('button'))) return;
       if (t.tagName === 'A') return;
+      if (t.tagName === 'INPUT') return;
+      if (t.tagName === 'SELECT') return;
+      if (t.closest && t.closest('.collapsible-content')) return;
       this.classList.toggle('open');
     });
   }
@@ -1022,11 +1033,44 @@
     var html='';
     for(var i=0;i<POWER_SURVEY.length;i++) {
       var it=POWER_SURVEY[i];
-      html+='<div class="survey-item"><div class="survey-item-head"><input type="checkbox" class="sv-check" id="'+it.id+'"><label for="'+it.id+'">'+it.label+'</label></div>';
-      html+='<div class="survey-item-extra"><input type="'+(it.type==='number'?'number':'text')+'" step="0.01" class="text-input" id="'+it.id+'-val"></div></div>';
+      var childId='child-'+it.id;
+      var ph='';
+      if(it.id==='sv_power') ph=' placeholder="请描述并填写配电设施情况"';
+      if(it.id==='sv_grid') ph=' placeholder="请描述并填写接入条件"';
+      if(it.id==='sv_meter') ph=' placeholder="请描述并填写计量装置现状"';
+      html+='<div class="collapsible-child">';
+      html+='<div class="collapsible-header" id="'+childId+'">';
+      html+='<span class="header-title"><input type="checkbox" class="sv-check" id="'+it.id+'" style="margin-right:8px;">'+it.label+'</span>';
+      html+='<span class="header-right"><span class="arrow">▼</span></span>';
+      html+='</div>';
+      html+='<div class="collapsible-content"><div class="collapsible-inner">';
+      if(it.id==='sv_voltage') {
+        html+='<div style="display:flex;align-items:center;gap:8px;"><input type="number" step="0.01" class="text-input" id="'+it.id+'-val"><span style="color:#8fa8c0;white-space:nowrap;">kV</span></div>';
+      } else {
+        html+='<input type="text" class="text-input" id="'+it.id+'-val"'+ph+'>';
+      }
+      html+='<div style="text-align:right;padding:8px 16px 12px;">';
+      html+='<button class="power-btn" data-header="'+childId+'" data-check="'+it.id+'" style="background:#1e3a52;color:#c9a84c;border:1px solid #c9a84c;padding:6px 16px;border-radius:4px;cursor:pointer;font-size:13px;">确认</button>';
+      html+='</div>';
+      html+='</div></div></div>';
     }
     $('power-survey').innerHTML=html;
-    document.querySelectorAll('.sv-check').forEach(function(el){ el.addEventListener('change', updateSurveyProgress); });
+    document.querySelectorAll('#power-survey .sv-check').forEach(function(el){ el.addEventListener('change', updateSurveyProgress); });
+    document.querySelectorAll('#power-survey .power-btn').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        var hdrId=this.getAttribute('data-header');
+        var cbId=this.getAttribute('data-check');
+        var hdr=$(hdrId);
+        if(hdr) hdr.classList.remove('open');
+        this.textContent='✅ 已确认';
+        this.disabled=true;
+        this.style.opacity='0.6';
+        var cb=$(cbId);
+        if(cb){ cb.checked=true; updateSurveyProgress(); }
+      });
+    });
+    bindCollapsibles($('power-survey'));
   }
 
   function renderComplySurvey() {
