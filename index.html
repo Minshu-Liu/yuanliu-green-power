@@ -496,8 +496,10 @@
       if (t.tagName === 'A') return;
       if (t.tagName === 'INPUT') return;
       if (t.tagName === 'SELECT') return;
+      if (t.tagName === 'LABEL') return;
       var ownContent = this.nextElementSibling;
       if (ownContent && ownContent.classList.contains('collapsible-content') && t.closest && t.closest('.collapsible-content') === ownContent) return;
+      e.stopPropagation();
       this.classList.toggle('open');
     });
   }
@@ -593,7 +595,7 @@
       id: 'u' + Date.now() + Math.random(),
       name: '', load: 0, annualKwh: 0, monthlyKwh: 0, monthlyManual: false,
       bill: '', slots: [0,0,0,0,0,0,0,0,0,0,0,0], opDays: 365,
-      isResident: '否', isAgri: '否', hasLegal: '是', policy: '符合', greenType: '其他'
+      isResident: '否', isAgri: '否', hasLegal: '是', policy: '符合', greenType: '其他', confirmed: false
     };
   }
 
@@ -790,7 +792,7 @@
       roofInner+='<div class="calc-box">①可用面积='+c.ua.toFixed(1)+'m² ②装机='+c.cap.toFixed(2)+'kW ③有效小时='+c.effHours.toFixed(0)+'h<br>④年发电量='+fmt(c.gen)+' kWh</div>';
       var sum = c.cap>0 ? ('装机 '+c.cap.toFixed(2)+'kW · 年发电 '+fmt(c.gen)+' kWh') : '';
       var delBtn = state.roofs.length>1 ? '<button class="roof-del-btn" data-i="'+i+'" style="background:none;border:none;color:#8fa8c0;font-size:16px;cursor:pointer;padding:0 4px;" onmouseover="this.style.color=\'#e05c5c\'" onmouseout="this.style.color=\'#8fa8c0\'">×</button>' : '';
-      html+='<div class="collapsible-wrap">'+
+      html+='<div class="collapsible-wrap collapsible-child">'+
         '<div class="collapsible-header"><span class="header-title">屋顶 '+(i+1)+'</span>'+
         '<span class="header-right"><span class="header-summary">'+sum+'</span>'+delBtn+'<span class="arrow">▼</span></span></div>'+
         '<div class="collapsible-content"><div class="collapsible-inner">'+roofInner+'</div></div></div>';
@@ -860,7 +862,7 @@
       inner+='<div class="field-row"><label>年有效发电小时(h)</label><input type="number" step="0.01" class="text-input ga" data-type="'+type+'" data-i="'+i+'" data-f="hours" value="'+(a.hours||'')+'"></div>';
       inner+='<div class="calc-box">年发电量：'+fmt(gen)+' kWh</div>';
       var sum = num(a.cap)>0 ? ('装机 '+num(a.cap)+'kW · 年发电 '+fmt(gen)+' kWh') : '';
-      html+=collHTML(type+' · 区域 '+(i+1), sum, inner);
+      html+='<div class="collapsible-child">'+collHTML(type+' · 区域 '+(i+1), sum, inner)+'</div>';
     }
     box.innerHTML=html;
     document.querySelectorAll('.ga').forEach(function(el){
@@ -979,9 +981,16 @@
       inner+='<div class="field-row"><label>绿电消费需求</label><select class="select-input u-f" data-i="'+i+'" data-f="greenType">';
       for(var g=0;g<GREEN_DEMAND.length;g++) inner+='<option'+(u.greenType===GREEN_DEMAND[g]?' selected':'')+'>'+GREEN_DEMAND[g]+'</option>';
       inner+='</select></div>';
+      inner+='<div style="text-align:right;padding:8px 0 4px;">';
+      if(u.confirmed) {
+        inner+='<button class="user-confirm-btn" data-i="'+i+'" disabled style="background:#1e3a52;color:#c9a84c;border:1px solid #c9a84c;padding:6px 16px;border-radius:4px;cursor:pointer;font-size:13px;opacity:0.6;">✅ 已确认</button>';
+      } else {
+        inner+='<button class="user-confirm-btn" data-i="'+i+'" style="background:#1e3a52;color:#c9a84c;border:1px solid #c9a84c;padding:6px 16px;border-radius:4px;cursor:pointer;font-size:13px;">确认</button>';
+      }
+      inner+='</div>';
       var uname = u.name || ('用户'+(i+1));
       var usum = uname+' · '+num(u.load)+'kW · '+fmt(annual)+'kWh/年';
-      html+=collHTML(uname, usum, inner);
+      html+='<div class="collapsible-child">'+collHTML(uname, usum, inner)+'</div>';
     }
     box.innerHTML=html;
     bindUserEvents();
@@ -1008,6 +1017,22 @@
     });
     document.querySelectorAll('.del-user').forEach(function(el){
       el.onclick=function(e){ e.stopPropagation(); if(state.users.length<=1){alert('至少保留1个用户');return;} state.users.splice(parseInt(this.getAttribute('data-i'),10),1); renderUsers(); };
+    });
+    document.querySelectorAll('.user-confirm-btn:not([disabled])').forEach(function(el){
+      el.onclick=function(e){
+        e.stopPropagation();
+        var i=parseInt(this.getAttribute('data-i'),10);
+        state.users[i].confirmed=true;
+        var wrap=this.parentElement;
+        while(wrap&&!wrap.classList.contains('collapsible-wrap')) wrap=wrap.parentElement;
+        if(wrap){
+          var hdr=wrap.querySelector('.collapsible-header');
+          if(hdr) hdr.classList.remove('open');
+        }
+        this.textContent='✅ 已确认';
+        this.disabled=true;
+        this.style.opacity='0.6';
+      };
     });
   }
 
@@ -1049,7 +1074,7 @@
       if(it.id==='sv_power') ph=' placeholder="请描述并填写配电设施情况"';
       if(it.id==='sv_grid') ph=' placeholder="请描述并填写接入条件"';
       if(it.id==='sv_meter') ph=' placeholder="请描述并填写计量装置现状"';
-      html+='<div class="collapsible-child">';
+      html+='<div class="collapsible-wrap collapsible-child">';
       html+='<div class="collapsible-header" id="'+childId+'">';
       html+='<span class="header-title"><input type="checkbox" class="sv-check" id="'+it.id+'" style="margin-right:8px;">'+it.label+'</span>';
       html+='<span class="header-right"><span class="arrow">▼</span></span>';
