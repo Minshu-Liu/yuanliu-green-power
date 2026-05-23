@@ -1,1866 +1,1345 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="format-detection" content="telephone=no">
-  <title>源流绿电直连自测工具</title>
-  <style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="format-detection" content="telephone=no">
+<title>源流绿电直连自测工具</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --primary: #1a7c6e;
-      --pass: #1a7c6e;
-      --warn: #d97706;
-      --deny: #dc2626;
-      --bg: #f5f7f6;
-      --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      --bg-main: #0d1b2a;
+      --bg-card: #132236;
+      --bg-input: #0d2336;
+      --color-primary: #c9a84c;
+      --color-secondary: #4a9ebb;
+      --color-text: #ffffff;
+      --color-text-sub: #8fa8c0;
+      --color-pass: #4a9ebb;
+      --color-warn: #c9a84c;
+      --color-deny: #e05555;
+      --color-border: #1e3a52;
+      --color-btn: linear-gradient(135deg, #c9a84c, #a8843c);
       --radius: 12px;
-      --text: #1a1a1a;
-      --text-secondary: #666;
-      --text-muted: #999;
-      --border: #e0e4e2;
+      --shadow: 0 2px 12px rgba(0,0,0,0.3);
     }
-
     html { -webkit-text-size-adjust: 100%; }
-
     body {
       font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
-      background: var(--bg);
-      color: var(--text);
+      background: var(--bg-main);
+      color: var(--color-text);
       line-height: 1.6;
       min-height: 100vh;
     }
-
-    .app {
-      max-width: 480px;
-      margin: 0 auto;
-      padding: 16px;
-      padding-bottom: 32px;
-      padding-top: 118px;
-    }
-
+    a { color: var(--color-secondary); }
     .fixed-top {
-      position: fixed;
-      top: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 100%;
-      max-width: 480px;
-      z-index: 200;
-      background: var(--bg);
-      box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+      position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 480px; z-index: 300; background: var(--bg-main);
+      border-bottom: 1px solid var(--color-border);
     }
-
-    /* Header */
-    .header {
-      text-align: center;
-      padding: 14px 16px 8px;
+    .header { text-align: center; padding: 16px 16px 10px; }
+    .header .subtitle {
+      font-size: 11px; letter-spacing: 3px; color: var(--color-text-sub);
+      text-transform: uppercase; line-height: 1.6; margin-bottom: 6px;
     }
-
-    .header h1 {
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--primary);
-      letter-spacing: 0.5px;
-    }
-
-    .header p {
-      font-size: 13px;
-      color: var(--text-secondary);
-      margin-top: 4px;
-    }
-
-    /* Step progress bar */
-    .step-progress {
-      display: flex;
-      align-items: center;
-      padding: 8px 10px 12px;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-    }
-    .sp-node {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      flex-shrink: 0;
-      min-width: 44px;
-    }
+    .header h1 { font-size: 20px; font-weight: 700; color: var(--color-text); }
+    .app { max-width: 480px; margin: 0 auto; padding: 16px; padding-top: 130px; padding-bottom: 40px; }
+    .step-progress { display: flex; align-items: center; padding: 8px 10px 12px; overflow-x: auto; }
+    .sp-node { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; min-width: 48px; }
     .sp-dot {
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      border: 2px solid #ccc;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 10px;
-      color: var(--text-muted);
-      background: #fff;
+      width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--color-border);
+      display: flex; align-items: center; justify-content: center; font-size: 10px;
+      color: var(--color-text-sub); background: var(--bg-main);
     }
-    .sp-node.current .sp-dot {
-      border-color: var(--primary);
-      background: var(--primary);
-      color: #fff;
-      font-weight: 700;
-    }
-    .sp-node.done .sp-dot {
-      border-color: var(--primary);
-      color: var(--primary);
-      font-size: 12px;
-    }
-    .sp-label {
-      font-size: 10px;
-      color: var(--text-muted);
-      margin-top: 3px;
-      text-align: center;
-      line-height: 1.2;
-      max-width: 52px;
-    }
-    .sp-node.current .sp-label { color: var(--primary); font-weight: 600; }
-    .sp-node.done .sp-label { color: var(--text-secondary); }
-    .sp-line {
-      flex: 1;
-      height: 2px;
-      background: #ddd;
-      min-width: 8px;
-      margin: 0 2px;
-      margin-bottom: 16px;
-    }
-    .sp-line.done { background: var(--primary); }
-
-    /* Step collapse blocks */
-    .step-block { margin-bottom: 12px; border-radius: var(--radius); overflow: hidden; box-shadow: var(--card-shadow); background: #fff; }
-    .step-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 14px;
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-      gap: 8px;
-    }
-    .step-header.expanded { background: var(--primary); color: #fff; }
-    .step-header.collapsed { background: #f0f9f7; color: var(--text); }
+    .sp-node.current .sp-dot { border-color: var(--color-secondary); background: var(--color-secondary); color: #fff; font-weight: 700; }
+    .sp-node.done .sp-dot { border-color: var(--color-primary); color: var(--color-primary); background: var(--bg-main); }
+    .sp-label { font-size: 10px; color: var(--color-text-sub); margin-top: 4px; text-align: center; max-width: 56px; line-height: 1.2; }
+    .sp-node.current .sp-label { color: var(--color-text); font-weight: 600; }
+    .sp-line { flex: 1; height: 2px; background: var(--color-border); min-width: 8px; margin-bottom: 18px; }
+    .sp-line.done { background: var(--color-primary); }
+    .step-block { margin-bottom: 12px; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); background: var(--bg-card); border: 1px solid var(--color-border); }
+    .step-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; cursor: pointer; gap: 8px; }
+    .step-header.collapsed { background: #1e3a52; }
+    .step-header.expanded { background: var(--color-primary); color: #0d1b2a; }
     .step-header-left { font-size: 14px; font-weight: 600; flex-shrink: 0; }
-    .step-header-right { font-size: 11px; color: var(--text-muted); text-align: right; flex: 1; line-height: 1.4; }
+    .step-header-right { font-size: 11px; color: var(--color-text-sub); text-align: right; flex: 1; line-height: 1.4; }
     .step-header.expanded .step-header-right { display: none; }
-    .step-header.collapsed .edit-tag { color: var(--primary); margin-left: 6px; white-space: nowrap; }
-    .step-content {
-      max-height: 4000px;
-      overflow: hidden;
-      transition: max-height 0.2s ease;
-      padding: 0 16px;
+    .step-header.collapsed .edit-tag { color: var(--color-primary); margin-left: 6px; }
+    .step-content { max-height: 50000px; overflow: hidden; transition: max-height 0.2s ease; }
+    .step-content.collapsed { max-height: 0; }
+    .step-content-inner { padding: 14px 16px 16px; }
+    .field-row { margin-bottom: 14px; }
+    .field-row label { display: block; font-size: 14px; margin-bottom: 6px; font-weight: 500; color: var(--color-text); }
+    .text-input, .select-input {
+      width: 100%; padding: 10px 12px; background: var(--bg-input); color: var(--color-text);
+      border: 1px solid var(--color-border); border-radius: 8px; font-size: 16px; font-family: inherit;
     }
-    .step-content.collapsed { max-height: 0; padding-top: 0; padding-bottom: 0; }
-    .step-content-inner { padding: 0 0 16px; }
-
-    /* Date wheel picker */
-    .date-wheel-wrap {
-      display: flex;
-      position: relative;
-      height: 180px;
-      background: #f9faf9;
-      border-radius: 8px;
-      overflow: hidden;
-      border: 1px solid var(--border);
-    }
-    .date-wheel-col {
-      flex: 1;
-      overflow: hidden;
-      position: relative;
-      touch-action: none;
-    }
-    .date-wheel-list {
-      transition: transform 0.15s ease-out;
-      padding: 72px 0;
-    }
-    .date-wheel-item {
-      height: 36px;
-      line-height: 36px;
-      text-align: center;
-      font-size: 16px;
-      color: var(--text-muted);
-    }
-    .date-wheel-item.active { color: var(--primary); font-weight: 600; font-size: 18px; }
-    .date-wheel-mask {
-      position: absolute;
-      left: 0; right: 0;
-      top: 72px;
-      height: 36px;
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-      pointer-events: none;
-    }
-    .section-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--primary);
-      margin: 12px 0 8px;
-    }
-
-    /* Cards */
-    .card {
-      background: #fff;
-      border-radius: var(--radius);
-      box-shadow: var(--card-shadow);
-      padding: 16px;
-      margin-bottom: 12px;
-    }
-
-    .card-title {
-      font-size: 15px;
-      font-weight: 600;
-      margin-bottom: 12px;
-      color: var(--text);
-    }
-
-    .step-label {
-      display: inline-block;
-      font-size: 12px;
-      color: var(--primary);
-      background: rgba(26, 124, 110, 0.1);
-      padding: 2px 8px;
-      border-radius: 4px;
-      margin-bottom: 8px;
-    }
-
-    .step { display: none; }
-    .step.visible { display: block; }
-
-    /* Option cards (radio) */
-    .option-cards {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .option-card {
-      display: block;
-      padding: 12px 14px;
-      border: 1.5px solid var(--border);
-      border-radius: 8px;
-      cursor: pointer;
-      transition: border-color 0.15s, background 0.15s;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .option-card input {
-      display: none;
-    }
-
-    .option-card .option-title {
-      font-size: 14px;
-      font-weight: 500;
-    }
-
-    .option-card .option-desc {
-      font-size: 12px;
-      color: var(--text-secondary);
-      margin-top: 2px;
-    }
-
-    .option-card.selected {
-      border-color: var(--primary);
-      background: rgba(26, 124, 110, 0.06);
-    }
-
-    .option-card.selected .option-title {
-      color: var(--primary);
-    }
-
-    /* Checkbox items */
-    .checkbox-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      padding: 10px 0;
-      border-bottom: 1px solid #f0f0f0;
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .checkbox-item:last-child { border-bottom: none; }
-
-    .checkbox-item input {
-      margin-top: 3px;
-      flex-shrink: 0;
-      width: 18px;
-      height: 18px;
-      accent-color: var(--primary);
-    }
-
-    .checkbox-item label {
-      font-size: 14px;
-      cursor: pointer;
-      flex: 1;
-    }
-
-    .sub-group {
-      margin: 8px 0 8px 28px;
-      padding: 12px;
-      background: #f9faf9;
-      border-radius: 8px;
-      border-left: 3px solid var(--primary);
-    }
-
-    .sub-group p {
-      font-size: 13px;
-      margin-bottom: 8px;
-      color: var(--text-secondary);
-    }
-
-    .btn-row {
-      display: flex;
-      gap: 10px;
-      margin-top: 8px;
-    }
-
+    .text-input:focus, .select-input:focus { outline: none; border-color: var(--color-primary); }
+    .text-input::placeholder { color: var(--color-text-sub); }
+    .input-wrap { display: flex; align-items: center; gap: 8px; }
+    .input-wrap input { flex: 1; }
+    .suffix { font-size: 13px; color: var(--color-text-sub); white-space: nowrap; }
+    .hint-sm { font-size: 12px; color: var(--color-text-sub); margin-top: 4px; }
     .btn {
-      display: inline-block;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 8px;
-      font-size: 14px;
-      font-family: inherit;
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
+      display: inline-block; padding: 12px 20px; border: none; border-radius: 8px;
+      font-size: 15px; font-family: inherit; cursor: pointer; width: 100%; margin-top: 12px;
     }
-
-    .btn:active { opacity: 0.85; }
-
-    .btn-primary {
-      background: var(--primary);
-      color: #fff;
-      width: 100%;
-      margin-top: 12px;
+    .btn-primary { background: var(--color-btn); color: #0d1b2a; font-weight: 600; }
+    .btn-primary:active { filter: brightness(1.1); }
+    .btn-secondary { background: transparent; color: var(--color-primary); border: 1px solid var(--color-primary); flex: 1; margin-top: 0; }
+    .btn-outline { background: transparent; color: var(--color-text-sub); border: 1px solid var(--color-border); flex: 1; margin-top: 0; }
+    .btn-add { background: none; border: 1px dashed var(--color-primary); color: var(--color-primary); width: 100%; padding: 10px; border-radius: 8px; font-size: 14px; cursor: pointer; margin-top: 8px; font-family: inherit; }
+    .btn-sm { padding: 4px 10px; font-size: 12px; border-radius: 6px; border: 1px solid var(--color-border); background: var(--bg-input); color: var(--color-text-sub); cursor: pointer; font-family: inherit; }
+    .btn-row, .m2-nav { display: flex; gap: 10px; margin-top: 12px; }
+    .option-cards { display: flex; flex-direction: column; gap: 8px; }
+    .option-card {
+      display: block; padding: 12px 14px; border: 1.5px solid var(--color-border); border-radius: 8px;
+      cursor: pointer; background: var(--bg-input);
     }
-
-    .btn-secondary {
-      background: #fff;
-      color: var(--primary);
-      border: 1px solid var(--primary);
-      flex: 1;
-    }
-
-    .btn-outline {
-      background: #fff;
-      color: var(--text-secondary);
-      border: 1px solid var(--border);
-      flex: 1;
-    }
-
-    .hint {
-      font-size: 12px;
-      color: var(--warn);
-      margin-top: 8px;
-      line-height: 1.5;
-    }
-
-    .error-hint {
-      font-size: 12px;
-      color: var(--deny);
-      margin-top: 4px;
-    }
-
-    /* Input fields */
-    .field-row {
-      margin-bottom: 14px;
-    }
-
-    .field-row label {
-      display: block;
-      font-size: 14px;
-      margin-bottom: 6px;
-      font-weight: 500;
-    }
-
-    .field-row .unit {
-      font-size: 12px;
-      color: var(--text-secondary);
-      font-weight: 400;
-    }
-
-    .input-wrap {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .input-wrap input[type="number"] {
-      flex: 1;
-      padding: 10px 12px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-size: 16px;
-      font-family: inherit;
-      background: #fff;
-      -webkit-appearance: none;
-    }
-
-    .input-wrap input[type="number"]:focus {
-      outline: none;
-      border-color: var(--primary);
-    }
-
-    .input-wrap .suffix {
-      font-size: 13px;
-      color: var(--text-secondary);
-      white-space: nowrap;
-    }
-
-    .year-options {
-      display: flex;
-      gap: 10px;
-    }
-
-    .year-option {
-      flex: 1;
-      padding: 10px 6px;
-      border: 1.5px solid var(--border);
-      border-radius: 8px;
-      text-align: center;
-      font-size: 13px;
-      cursor: pointer;
-      background: #fff;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .year-option.selected {
-      border-color: var(--primary);
-      background: rgba(26, 124, 110, 0.08);
-      color: var(--primary);
-      font-weight: 600;
-    }
-
-    /* Output */
-    .output-area {
-      display: none;
-      margin-top: 16px;
-    }
-
-    .output-area.visible { display: block; }
-
-    .result-card {
-      background: #fff;
-      border-radius: var(--radius);
-      box-shadow: var(--card-shadow);
-      overflow: hidden;
-      border: 1px solid #eee;
-    }
-
-    .result-header {
-      padding: 16px;
-      text-align: center;
-    }
-
-    .result-header.pass { background: rgba(26, 124, 110, 0.08); }
-    .result-header.warn { background: rgba(217, 119, 6, 0.08); }
-    .result-header.deny { background: rgba(220, 38, 38, 0.08); }
-
-    .result-icon {
-      font-size: 32px;
-      line-height: 1;
-      margin-bottom: 6px;
-    }
-
-    .result-title {
-      font-size: 17px;
-      font-weight: 700;
-    }
-
-    .result-header.pass .result-title { color: var(--pass); }
-    .result-header.warn .result-title { color: var(--warn); }
-    .result-header.deny .result-title { color: var(--deny); }
-
-    .result-subtitle {
-      font-size: 13px;
-      color: var(--text-secondary);
-      margin-top: 6px;
-      line-height: 1.6;
-      text-align: left;
-    }
-
-    .result-body { padding: 16px; }
-
-    .result-section {
-      margin-bottom: 14px;
-    }
-
-    .result-section:last-child { margin-bottom: 0; }
-
-    .result-section h4 {
-      font-size: 13px;
-      color: var(--text-secondary);
-      margin-bottom: 8px;
-      font-weight: 600;
-    }
-
-    .result-section ul {
-      list-style: none;
-      padding: 0;
-    }
-
-    .result-section li {
-      font-size: 14px;
-      padding: 6px 0;
-      border-bottom: 1px solid #f5f5f5;
-      line-height: 1.5;
-    }
-
-    .result-section li:last-child { border-bottom: none; }
-
-    .star-badge {
-      display: inline-block;
-      background: rgba(26, 124, 110, 0.12);
-      color: var(--primary);
-      font-size: 12px;
-      padding: 2px 8px;
-      border-radius: 4px;
-      margin-left: 4px;
-    }
-
-    .metric-card {
-      background: #fff;
-      border: 1px solid #eee;
-      border-radius: var(--radius);
-      padding: 14px;
-      margin: 0 16px 10px;
-    }
-
-    .metric-card:first-child { margin-top: 16px; }
-
-    .metric-name {
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 10px;
-    }
-
-    .metric-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 14px;
-      margin-bottom: 4px;
-    }
-
-    .metric-conclusion {
-      font-size: 14px;
-      margin-top: 8px;
-      font-weight: 500;
-    }
-
-    .metric-fix {
-      font-size: 12px;
-      color: var(--deny);
-      margin-top: 6px;
-      line-height: 1.5;
-    }
-
-    .metric-card.pass { border-left: 3px solid var(--pass); }
-    .metric-card.fail { border-left: 3px solid var(--deny); }
-
-    .notice-box {
-      margin: 0 16px 16px;
-      padding: 12px;
-      background: #f9faf9;
-      border-radius: 8px;
-      font-size: 12px;
-      color: var(--text-secondary);
-      line-height: 1.7;
-    }
-
-    .result-footer {
-      padding: 12px 16px;
-      border-top: 1px solid #f0f0f0;
-      text-align: center;
-    }
-
-    .btn-reset {
-      background: none;
-      border: 1px solid var(--border);
-      color: var(--text-secondary);
-      padding: 8px 24px;
-      border-radius: 8px;
-      font-size: 14px;
-      cursor: pointer;
-      font-family: inherit;
-    }
-
-    .footer {
-      text-align: center;
-      font-size: 11px;
-      color: var(--text-muted);
-      padding: 24px 0 8px;
-      line-height: 1.8;
-    }
-
-    .hidden { display: none !important; }
-
-    /* ===== 模块二专用样式 ===== */
-
-    .text-input, .select-input, .input-wrap input[type="text"],
-    .input-wrap input[type="date"] {
-      width: 100%;
-      padding: 10px 12px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-size: 16px;
-      font-family: inherit;
-      background: #fff;
-    }
-
-    .text-input:focus, .select-input:focus,
-    .input-wrap input[type="text"]:focus,
-    .input-wrap input[type="date"]:focus {
-      outline: none;
-      border-color: var(--primary);
-    }
-
-    .survey-group { margin-bottom: 16px; }
-    .survey-group-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--primary);
-      margin-bottom: 8px;
-      padding-bottom: 4px;
-      border-bottom: 1px solid rgba(26,124,110,0.2);
-    }
-    .survey-item {
-      padding: 10px 0;
-      border-bottom: 1px solid #f0f0f0;
-    }
-    .survey-item-head {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-    }
-    .survey-item-head input[type="checkbox"] {
-      margin-top: 3px;
-      width: 18px;
-      height: 18px;
-      accent-color: var(--primary);
-      flex-shrink: 0;
-    }
-    .survey-item-head label { font-size: 14px; flex: 1; }
-    .survey-item-extra { margin: 8px 0 0 28px; }
-
+    .option-card input { display: none; }
+    .option-card.selected { border-color: var(--color-primary); background: rgba(201,168,76,0.1); }
+    .option-card.selected .option-title { color: var(--color-primary); }
+    .option-title { font-size: 14px; font-weight: 500; }
+    .option-desc { font-size: 12px; color: var(--color-text-sub); margin-top: 2px; }
+    .checkbox-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--color-border); }
+    .checkbox-item input { margin-top: 3px; accent-color: var(--color-primary); width: 18px; height: 18px; }
+    .checkbox-item label { font-size: 14px; flex: 1; cursor: pointer; }
+    .section-title { font-size: 14px; font-weight: 600; color: var(--color-primary); margin: 16px 0 10px; padding-bottom: 4px; border-bottom: 1px solid var(--color-border); }
+    .section-block { margin-bottom: 16px; }
+    .inner-card { background: var(--bg-input); border: 1px solid var(--color-border); border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+    .inner-card-head { display: flex; justify-content: space-between; align-items: center; font-weight: 600; margin-bottom: 10px; font-size: 14px; }
+    .calc-box { background: rgba(74,158,187,0.08); border-radius: 8px; padding: 12px; font-size: 13px; line-height: 1.8; margin-top: 8px; border: 1px solid var(--color-border); }
+    .calc-highlight { color: var(--color-primary); font-weight: 600; }
+    .mini-cards { display: flex; flex-direction: column; gap: 6px; }
+    .mini-card { padding: 8px 10px; border: 1px solid var(--color-border); border-radius: 6px; font-size: 13px; cursor: pointer; background: var(--bg-card); }
+    .mini-card.selected { border-color: var(--color-primary); color: var(--color-primary); background: rgba(201,168,76,0.08); }
+    .ref { font-size: 11px; color: var(--color-text-sub); }
+    .shading-ref { font-size: 12px; color: var(--color-text-sub); padding: 8px; background: var(--bg-card); border-radius: 6px; margin: 8px 0; line-height: 1.6; }
     .progress-wrap { margin: 12px 0; }
-    .progress-text { font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; }
-    .progress-bar {
-      height: 8px;
-      background: #e8ecea;
-      border-radius: 4px;
-      overflow: hidden;
-    }
-    .progress-fill {
-      height: 100%;
-      background: var(--primary);
-      border-radius: 4px;
-      transition: width 0.3s;
-    }
-
-    .calc-box {
-      background: #f9faf9;
-      border-radius: 8px;
-      padding: 12px;
-      margin-top: 8px;
-      font-size: 13px;
-      line-height: 1.8;
-    }
-    .calc-box .calc-highlight { color: var(--primary); font-weight: 600; }
-
-    .roof-card {
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 12px;
-      background: #fafbfb;
-    }
-    .roof-card-title {
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .ref-tag {
-      font-size: 11px;
-      color: var(--text-muted);
-      font-weight: 400;
-    }
-    .mini-cards { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
-    .mini-card {
-      padding: 8px 10px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 13px;
-      cursor: pointer;
-      background: #fff;
-    }
-    .mini-card.selected {
-      border-color: var(--primary);
-      background: rgba(26,124,110,0.06);
-      color: var(--primary);
-    }
-    .shading-ref {
-      font-size: 12px;
-      color: var(--text-secondary);
-      line-height: 1.7;
-      margin: 8px 0;
-      padding: 8px;
-      background: #fff;
-      border-radius: 6px;
-    }
-
-    .user-table { width: 100%; font-size: 13px; margin-top: 8px; }
-    .user-table th {
-      text-align: left;
-      font-weight: 500;
-      color: var(--text-secondary);
-      padding: 6px 4px;
-      font-size: 12px;
-    }
-    .user-table td { padding: 4px; }
-    .user-table input {
-      width: 100%;
-      padding: 6px 8px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 14px;
-      font-family: inherit;
-    }
-    .user-table .auto-val { color: var(--primary); font-weight: 500; }
-    .total-row {
-      margin-top: 10px;
-      padding-top: 10px;
-      border-top: 1px solid var(--border);
-      font-size: 14px;
-      font-weight: 600;
-    }
-
-    .flex-options { display: flex; gap: 8px; }
-    .flex-option {
-      flex: 1;
-      padding: 10px 6px;
-      border: 1.5px solid var(--border);
-      border-radius: 8px;
-      text-align: center;
-      font-size: 13px;
-      cursor: pointer;
-      background: #fff;
-    }
-    .flex-option.selected {
-      border-color: var(--primary);
-      background: rgba(26,124,110,0.08);
-      color: var(--primary);
-      font-weight: 600;
-    }
-
-    .imported-badge {
-      display: inline-block;
-      font-size: 11px;
-      color: var(--primary);
-      background: rgba(26,124,110,0.12);
-      padding: 2px 8px;
-      border-radius: 4px;
-      margin-left: 6px;
-      font-weight: 400;
-    }
-    .input-highlight { border-color: var(--primary) !important; background: rgba(26,124,110,0.04) !important; }
-
-    .source-tag {
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-bottom: 12px;
-    }
-    .emission-card {
-      background: rgba(26,124,110,0.06);
-      border-radius: 8px;
-      padding: 14px;
-      margin-top: 12px;
-    }
+    .progress-text { font-size: 13px; color: var(--color-text-sub); margin-bottom: 6px; }
+    .progress-bar { height: 8px; background: var(--color-border); border-radius: 4px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--color-primary); border-radius: 4px; transition: width 0.3s; }
+    .ref-hint-card { background: rgba(201,168,76,0.08); border: 1px solid var(--color-border); border-radius: 8px; padding: 12px; margin: 10px 0; font-size: 13px; color: var(--color-text-sub); line-height: 1.7; }
+    .survey-item { padding: 10px 0; border-bottom: 1px solid var(--color-border); }
+    .survey-item-head { display: flex; gap: 10px; align-items: flex-start; }
+    .survey-item-extra { margin: 8px 0 0 28px; }
+    .flex-options { display: flex; gap: 8px; flex-wrap: wrap; }
+    .flex-option { flex: 1; min-width: 70px; padding: 10px 6px; border: 1.5px solid var(--color-border); border-radius: 8px; text-align: center; font-size: 13px; cursor: pointer; background: var(--bg-input); }
+    .flex-option.selected { border-color: var(--color-primary); background: rgba(201,168,76,0.1); color: var(--color-primary); font-weight: 600; }
+    .cert-opt { flex: 1; }
+    .warn-box { background: rgba(224,85,85,0.1); border: 1px solid var(--color-deny); color: var(--color-deny); padding: 10px; border-radius: 8px; font-size: 13px; margin-top: 8px; }
+    .slot-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 13px; }
+    .slot-label { width: 52px; flex-shrink: 0; color: var(--color-text-sub); }
+    .slot-row input { flex: 1; padding: 6px 8px; }
+    .slot-unit { font-size: 11px; color: var(--color-text-sub); white-space: nowrap; }
+    .total-row { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--color-border); font-weight: 600; font-size: 14px; }
+    .readonly-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--color-border); font-size: 13px; color: var(--color-text-sub); }
+    .readonly-val { color: var(--color-text-sub); font-size: 18px; font-weight: 600; margin: 8px 0; }
+    .user-table, .compare-table { width: 100%; font-size: 13px; border-collapse: collapse; margin: 10px 0; }
+    .user-table th, .compare-table th { text-align: left; color: var(--color-text-sub); padding: 6px 4px; font-weight: 500; }
+    .user-table td, .compare-table td { padding: 6px 4px; border-top: 1px solid var(--color-border); }
+    .metric-card { background: var(--bg-input); border: 1px solid var(--color-border); border-radius: 8px; padding: 14px; margin-bottom: 10px; }
+    .metric-card.pass { border-left: 3px solid var(--color-pass); }
+    .metric-card.fail { border-left: 3px solid var(--color-deny); }
+    .metric-name { font-weight: 600; margin-bottom: 8px; font-size: 14px; }
+    .metric-row { display: flex; justify-content: space-between; font-size: 14px; }
+    .result-header { padding: 16px; text-align: center; border-radius: 8px; margin-top: 12px; }
+    .result-header.pass { background: rgba(74,158,187,0.15); }
+    .result-header.warn { background: rgba(201,168,76,0.15); }
+    .result-header.deny { background: rgba(224,85,85,0.15); }
+    .result-title { font-size: 16px; font-weight: 700; }
+    .notice-box { font-size: 12px; color: var(--color-text-sub); line-height: 1.7; margin-top: 12px; padding: 12px; background: var(--bg-input); border-radius: 8px; }
+    .emission-card { background: rgba(74,158,187,0.1); border-radius: 8px; padding: 14px; margin-top: 12px; border: 1px solid var(--color-border); }
     .emission-row { font-size: 15px; padding: 6px 0; }
-
-    .report-card { background: #fff; }
-    .report-title {
-      text-align: center;
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--primary);
-      padding: 16px;
-      border-bottom: 1px solid #eee;
-    }
-    .report-meta {
-      padding: 12px 16px;
-      font-size: 13px;
-      color: var(--text-secondary);
-      line-height: 1.8;
-      border-bottom: 1px solid #f0f0f0;
-    }
-    .report-section {
-      padding: 12px 16px;
-      border-bottom: 1px solid #f0f0f0;
-    }
-    .report-section h3 {
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 8px;
-      color: var(--text);
-    }
-    .report-section p, .report-section li {
-      font-size: 14px;
-      line-height: 1.7;
-    }
+    .preview-row { font-size: 13px; color: var(--color-text-sub); margin-bottom: 10px; line-height: 1.8; }
+    .chart-wrap { margin: 16px 0; background: var(--bg-input); padding: 12px; border-radius: 8px; border: 1px solid var(--color-border); }
+    .date-display { padding: 12px; background: var(--bg-input); border: 1px solid var(--color-border); border-radius: 8px; cursor: pointer; font-size: 16px; }
+    .date-display:active { border-color: var(--color-primary); }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 500; display: flex; align-items: flex-end; justify-content: center; }
+    .modal-card { background: var(--bg-card); border-radius: 12px 12px 0 0; width: 100%; max-width: 480px; padding: 20px 16px; border: 1px solid var(--color-border); }
+    .modal-title { text-align: center; font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+    .date-wheel-wrap { display: flex; position: relative; height: 180px; overflow: hidden; }
+    .date-wheel-col { flex: 1; overflow: hidden; position: relative; touch-action: none; }
+    .date-wheel-list { transition: transform 0.15s; padding: 72px 0; }
+    .date-wheel-item { height: 36px; line-height: 36px; text-align: center; font-size: 16px; color: rgba(143,168,192,0.5); }
+    .date-wheel-item.active { color: var(--color-text); font-weight: 600; border-bottom: 2px solid var(--color-primary); }
+    .date-wheel-mask { position: absolute; left: 0; right: 0; top: 72px; height: 36px; border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); pointer-events: none; }
+    .output-area { display: none; margin-top: 16px; }
+    .output-area.visible { display: block; }
+    .report-card { background: var(--bg-card); border: 1px solid var(--color-border); border-radius: var(--radius); overflow: hidden; }
+    .report-title { text-align: center; font-size: 18px; font-weight: 700; color: var(--color-primary); padding: 20px 16px; background: var(--bg-main); border-bottom: 1px solid var(--color-border); }
+    .report-meta { padding: 14px 16px; font-size: 13px; color: var(--color-text-sub); line-height: 1.8; }
+    .report-section { padding: 12px 16px; border-bottom: 1px solid var(--color-border); }
+    .report-section h3 { font-size: 14px; color: var(--color-primary); margin-bottom: 8px; }
+    .report-section p, .report-section li { font-size: 14px; line-height: 1.7; color: var(--color-text-sub); }
     .report-section ul { list-style: none; padding: 0; }
-    .report-section li { padding: 3px 0; }
-    .report-footer-note {
-      text-align: center;
-      font-size: 11px;
-      color: var(--text-muted);
-      padding: 16px;
-      line-height: 1.8;
-    }
-
-    .btn-sm {
-      padding: 6px 12px;
-      font-size: 12px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      background: #fff;
-      color: var(--text-secondary);
+    .footer { text-align: center; font-size: 11px; color: var(--color-text-sub); padding: 24px 0; line-height: 1.8; }
+    .hidden { display: none !important; }
+    .collapsible-wrap { margin-bottom: 10px; }
+    .collapsible-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: #1e3a52;
+      border-left: 3px solid #c9a84c;
       cursor: pointer;
-      font-family: inherit;
+      user-select: none;
     }
-    .btn-add {
-      background: none;
-      border: 1px dashed var(--primary);
-      color: var(--primary);
-      width: 100%;
-      padding: 10px;
-      border-radius: 8px;
-      font-size: 14px;
-      cursor: pointer;
-      margin-top: 8px;
-      font-family: inherit;
-    }
-
-    .optional-tag {
-      font-size: 12px;
-      color: var(--warn);
-      background: rgba(217,119,6,0.1);
-      padding: 4px 10px;
-      border-radius: 4px;
-      margin-bottom: 12px;
-      display: inline-block;
-    }
-
-    .m2-nav { display: flex; gap: 8px; margin-top: 12px; }
-    .m2-nav .btn-primary { margin-top: 0; flex: 1; }
-
+    .collapsible-header:hover { background: #243d54; }
+    .collapsible-header .header-title { font-weight: 600; color: #ffffff; font-size: 14px; }
+    .collapsible-header .header-summary { font-size: 12px; color: #8fa8c0; margin-right: 8px; }
+    .header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .arrow { font-size: 12px; display: inline-block; transition: transform 200ms ease; color: #8fa8c0; flex-shrink: 0; }
+    .collapsible-content { max-height: 0; overflow: hidden; transition: max-height 200ms ease; }
+    .collapsible-header.open + .collapsible-content { max-height: 3000px; }
+    .collapsible-header.open .arrow { transform: rotate(180deg); }
+    .collapsible-inner { padding: 12px 0 4px; }
     @media print {
-      body { background: #fff; }
-      .fixed-top, .footer, .step-content, .step-header, .btn-add, #report-actions { display: none !important; }
-      .app { max-width: none; padding: 0; padding-top: 0; }
-      #report { display: block !important; }
-      .report-card { box-shadow: none; border: none; }
+      .collapsible-content { max-height: none !important; overflow: visible !important; }
+      .collapsible-header.open + .collapsible-content { max-height: none !important; }
+      .collapsible-header .arrow { display: none; }
+      #report-body .collapsible-content { max-height: none !important; }
     }
-  </style>
+
+    .year-options { display: flex; gap: 10px; }
+    .year-option { flex: 1; padding: 10px; border: 1.5px solid var(--color-border); border-radius: 8px; text-align: center; font-size: 13px; cursor: pointer; background: var(--bg-input); }
+    .year-option.selected { border-color: var(--color-primary); color: var(--color-primary); background: rgba(201,168,76,0.1); font-weight: 600; }
+    @media print {
+      body { background: #fff !important; color: #000 !important; }
+      .fixed-top, .step-block, .footer, .m2-nav, #report-actions { display: none !important; }
+      .app { padding-top: 0; max-width: none; }
+      #report { display: block !important; }
+      .report-card, .report-section, .report-meta { background: #fff !important; color: #000 !important; border-color: #ccc !important; }
+      .report-title { color: #333 !important; background: #fff !important; }
+      .report-section h3 { color: #333 !important; }
+    }
+</style>
 </head>
 <body>
-  <div class="fixed-top">
-    <header class="header"><h1>源流绿电直连自测工具</h1></header>
-    <div class="step-progress" id="step-progress"></div>
-  </div>
-  <div class="app" id="main-app">
+<div class="fixed-top">
+  <header class="header">
+    <div class="subtitle">GREEN POWER DIRECT CONNECTION<br>ASSESSMENT TOOL</div>
+    <h1>源流绿电直连自测工具</h1>
+  </header>
+  <div class="step-progress" id="step-progress"></div>
+</div>
+<div class="app">
 
-    <!-- Step 1 -->
     <div class="step-block" id="block-s1" data-step="s1">
       <div class="step-header expanded" id="hdr-s1">
         <span class="step-header-left">Step 1 基本信息</span>
         <span class="step-header-right"><span id="sum-s1"></span></span>
       </div>
-      <div class="step-content" id="cnt-s1">
-        <div class="step-content-inner">
-          <div class="field-row"><label>项目名称</label><input type="text" class="text-input" id="projectName" placeholder="请输入"></div>
-          <div class="field-row"><label>所在省份/城市</label><input type="text" class="text-input" id="location" placeholder="如：江苏省南京市"></div>
-          <div class="field-row"><label>踏勘日期</label>
-            <div class="date-wheel-wrap" id="date-wheel">
-              <div class="date-wheel-col" id="wheel-year"><div class="date-wheel-list"></div></div>
-              <div class="date-wheel-col" id="wheel-month"><div class="date-wheel-list"></div></div>
-              <div class="date-wheel-col" id="wheel-day"><div class="date-wheel-list"></div></div>
-              <div class="date-wheel-mask"></div>
-            </div>
-            <input type="hidden" id="surveyDate">
+      <div class="step-content" id="cnt-s1"><div class="step-content-inner">
+        <div class="field-row"><label>项目名称</label><input type="text" class="text-input" id="projectName" placeholder="请输入"></div>
+        <div class="field-row"><label>所在省份/城市</label><input type="text" class="text-input" id="location" placeholder="如：江苏省南京市"></div>
+        <div class="field-row"><label>踏勘日期</label><div class="date-display" id="date-display">2026年5月21日  ✏️</div><input type="hidden" id="surveyDate"></div>
+        <div class="field-row"><label>填报人</label><input type="text" class="text-input" id="reporter" placeholder="请输入"></div>
+        <div class="field-row"><label>项目类型</label>
+          <div class="option-cards" id="type-cards">
+            <label class="option-card" data-value="grid"><input type="radio" name="projectType" value="grid"><div class="option-title">并网型</div><div class="option-desc">整体接入公共电网</div></label>
+            <label class="option-card" data-value="offgrid"><input type="radio" name="projectType" value="offgrid"><div class="option-title">离网型</div><div class="option-desc">不接入公共电网</div></label>
           </div>
-          <div class="field-row"><label>填报人</label><input type="text" class="text-input" id="reporter" placeholder="请输入"></div>
-          <div class="field-row"><label>项目类型</label>
-            <div class="option-cards" id="type-cards">
-              <label class="option-card" data-value="grid"><input type="radio" name="projectType" value="grid"><div class="option-title">并网型</div><div class="option-desc">整体接入公共电网</div></label>
-              <label class="option-card" data-value="offgrid"><input type="radio" name="projectType" value="offgrid"><div class="option-title">离网型</div><div class="option-desc">不接入公共电网</div></label>
-            </div>
-          </div>
-          <div class="field-row"><label>新能源类型（可多选）</label>
-            <div class="checkbox-item"><input type="checkbox" id="en-solar" value="solar"><label for="en-solar">光伏</label></div>
-            <div class="checkbox-item"><input type="checkbox" id="en-wind" value="wind"><label for="en-wind">风电</label></div>
-            <div class="checkbox-item"><input type="checkbox" id="en-biomass" value="biomass"><label for="en-biomass">生物质</label></div>
-            <div class="checkbox-item"><input type="checkbox" id="en-combo" value="combo"><label for="en-combo">组合</label></div>
-          </div>
-          <button type="button" class="btn btn-primary btn-next" data-from="s1">下一步</button>
         </div>
-      </div>
+        <div class="field-row" id="s1-energy"><label>新能源类型（可多选）</label>
+          <div class="checkbox-item"><input type="checkbox" id="en-solar" value="solar"><label for="en-solar">光伏</label></div>
+          <div class="checkbox-item"><input type="checkbox" id="en-wind" value="wind"><label for="en-wind">风电</label></div>
+          <div class="checkbox-item"><input type="checkbox" id="en-biomass" value="biomass"><label for="en-biomass">生物质</label></div>
+          <div class="checkbox-item"><input type="checkbox" id="en-combo" value="combo"><label for="en-combo">组合</label></div>
+        </div>
+        <button type="button" class="btn btn-primary btn-next" data-from="s1">下一步</button>
+      </div></div>
     </div>
 
-    <!-- Step 2 -->
     <div class="step-block hidden" id="block-s2" data-step="s2">
       <div class="step-header collapsed" id="hdr-s2">
-        <span class="step-header-left">Step 2 踏勘清单</span>
-        <span class="step-header-right"><span id="sum-s2"></span><span class="edit-tag">✏️ 修改</span></span>
+        <span class="step-header-left">Step 2 现场踏勘</span>
+        <span class="step-header-right"><span id="sum-s2"></span></span>
       </div>
-      <div class="step-content collapsed" id="cnt-s2">
-        <div class="step-content-inner">
-          <div class="section-title">场地类型（可多选）</div>
-          <div class="checkbox-item"><input type="checkbox" class="site-type" id="st-roof" value="屋顶"><label for="st-roof">屋顶</label></div>
-          <div class="checkbox-item"><input type="checkbox" class="site-type" id="st-ground" value="地面"><label for="st-ground">地面</label></div>
-          <div class="checkbox-item"><input type="checkbox" class="site-type" id="st-waste" value="荒地"><label for="st-waste">荒地</label></div>
-          <div class="checkbox-item"><input type="checkbox" class="site-type" id="st-fish" value="鱼塘"><label for="st-fish">鱼塘</label></div>
-          <div class="checkbox-item"><input type="checkbox" class="site-type" id="st-greenhouse" value="农业大棚"><label for="st-greenhouse">农业大棚</label></div>
-          <div class="progress-wrap"><div class="progress-text" id="progress-text">已完成 0 / 0 项</div><div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div></div>
-          <div id="survey-list"></div>
-          <div id="custom-list"></div>
-          <button type="button" class="btn-add" id="add-survey">+ 新增踏勘项目</button>
-          <div id="add-form" class="hidden sub-group" style="margin-top:12px;">
-            <input type="text" class="text-input" id="custom-input" placeholder="输入自定义踏勘项">
-            <button type="button" class="btn btn-secondary" id="save-custom" style="margin-top:8px;width:100%;">保存</button>
-          </div>
-          <button type="button" class="btn btn-primary btn-next" data-from="s2">下一步</button>
+      <div class="step-content collapsed" id="cnt-s2"><div class="step-content-inner">
+        <div class="progress-wrap"><div class="progress-text" id="progress-text">已完成 0 / 0 项</div><div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div></div>
+        <div class="collapsible-wrap">
+          <div class="collapsible-header" id="coll-site-hdr"><span class="header-title">拟安装场地类型（可多选）</span><span class="header-right"><span class="header-summary" id="coll-site-sum"></span><span class="arrow">▼</span></span></div>
+          <div class="collapsible-content"><div class="collapsible-inner">
+        <div class="checkbox-item"><input type="checkbox" class="site-type" id="st-roof" value="屋顶"><label for="st-roof">屋顶</label></div>
+        <div class="checkbox-item"><input type="checkbox" class="site-type" id="st-ground" value="地面"><label for="st-ground">地面</label></div>
+        <div class="checkbox-item"><input type="checkbox" class="site-type" id="st-waste" value="荒地"><label for="st-waste">荒地</label></div>
+        <div class="checkbox-item"><input type="checkbox" class="site-type" id="st-fish" value="鱼塘"><label for="st-fish">鱼塘</label></div>
+        <div class="checkbox-item"><input type="checkbox" class="site-type" id="st-greenhouse" value="农业大棚"><label for="st-greenhouse">农业大棚</label></div>
+        <div class="checkbox-item"><input type="checkbox" class="site-type" id="st-other" value="其他"><label for="st-other">其他</label></div>
+        <div class="field-row hidden" id="st-other-row"><label>场地描述</label><input type="text" class="text-input" id="st-other-input" placeholder="描述其他场地类型"></div>
+          </div></div>
         </div>
-      </div>
+
+        <div id="hint-solar" class="ref-hint-card hidden"><strong>光伏参考参数</strong><br>组件功率密度：85～120 Wp/m²<br>系统综合效率：75%～85%<br>建议使用 <a href="https://solargis.com/maps-and-gis-data/overview" target="_blank">Solargis</a> 获取年有效发电小时数</div>
+        <div id="hint-wind" class="ref-hint-card hidden"><strong>风电参考参数</strong><br>系统效率：80%～90%<br>建议咨询当地气象部门获取风资源数据</div>
+        <div id="hint-biomass" class="ref-hint-card hidden"><strong>生物质参考参数</strong><br>年运行小时数：6000～7500h<br>厂用电率：5%～8%</div>
+
+        <div id="sec-roof" class="hidden collapsible-wrap">
+          <div class="collapsible-header" id="coll-roof-hdr"><span class="header-title">屋顶光伏估算</span><span class="header-right"><span class="header-summary" id="coll-roof-sum"></span><span class="arrow">▼</span></span></div>
+          <div class="collapsible-content"><div class="collapsible-inner"><div id="roofs-container"></div><button type="button" class="btn-add" id="add-roof">+ 添加屋顶</button><div class="calc-box" id="roof-subtotal">—</div></div></div>
+        </div>
+        <div id="sec-ground" class="hidden"><div id="ground-sections"></div></div>
+        <div id="sec-wind" class="hidden collapsible-wrap">
+          <div class="collapsible-header" id="coll-wind-hdr"><span class="header-title">风电估算</span><span class="header-right"><span class="header-summary" id="coll-wind-sum"></span><span class="arrow">▼</span></span></div>
+          <div class="collapsible-content"><div class="collapsible-inner">
+          <div class="field-row"><label>场地基本情况</label><input type="text" class="text-input" id="wind-desc"></div>
+          <div class="field-row"><label>拟装机容量(kW)</label><input type="number" step="0.01" class="text-input" id="wind-cap"></div>
+          <div class="field-row"><label>年有效发电小时(h)</label><input type="number" step="0.01" class="text-input" id="wind-hours"></div>
+          <div class="field-row"><label>系统效率(%)</label><input type="number" step="0.01" class="text-input" id="wind-eff" value="85"><p class="hint-sm">提示80～90</p></div>
+          <div class="calc-box">年发电量：<span class="calc-highlight" id="wind-gen">0</span> kWh</div>
+          </div></div>
+        </div>
+        <div id="sec-biomass" class="hidden collapsible-wrap">
+          <div class="collapsible-header" id="coll-bio-hdr"><span class="header-title">生物质估算</span><span class="header-right"><span class="header-summary" id="coll-bio-sum"></span><span class="arrow">▼</span></span></div>
+          <div class="collapsible-content"><div class="collapsible-inner">
+          <div class="field-row"><label>场地基本情况</label><input type="text" class="text-input" id="bio-desc"></div>
+          <div class="field-row"><label>拟装机容量(kW)</label><input type="number" step="0.01" class="text-input" id="bio-cap"></div>
+          <div class="field-row"><label>年运行小时(h)</label><input type="number" step="0.01" class="text-input" id="bio-hours"></div>
+          <div class="field-row"><label>厂用电率(%)</label><input type="number" step="0.01" class="text-input" id="bio-aux" value="5"></div>
+          <div class="calc-box">年发电量：<span class="calc-highlight" id="bio-gen">0</span> kWh</div>
+          </div></div>
+        </div>
+        <div id="sec-other" class="hidden collapsible-wrap">
+          <div class="collapsible-header" id="coll-other-hdr"><span class="header-title">其他场地估算</span><span class="header-right"><span class="header-summary" id="coll-other-sum"></span><span class="arrow">▼</span></span></div>
+          <div class="collapsible-content"><div class="collapsible-inner">
+          <div class="field-row"><label>场地类型描述</label><input type="text" class="text-input" id="other-type"></div>
+          <div class="field-row"><label>场地基本情况</label><input type="text" class="text-input" id="other-desc"></div>
+          <div class="field-row"><label>装机容量(kW)</label><input type="number" step="0.01" class="text-input" id="other-cap"></div>
+          <div class="field-row"><label>年发电量(kWh)</label><input type="number" step="0.01" class="text-input" id="other-gen"></div>
+          </div></div>
+        </div>
+        <div class="calc-box" style="margin-top:16px;">全部合计：总装机 <span class="calc-highlight" id="site-total-cap">0</span> kW · 总年发电量 <span class="calc-highlight" id="site-total-gen">0</span> kWh</div>
+
+        <div class="collapsible-wrap">
+          <div class="collapsible-header" id="coll-rights-hdr"><span class="header-title">拟安装场地权属确认</span><span class="header-right"><span class="header-summary" id="coll-rights-sum"></span><span class="arrow">▼</span></span></div>
+          <div class="collapsible-content"><div class="collapsible-inner">
+        <div class="field-row"><label>权属人名称</label><input type="text" class="text-input" id="rights-owner"></div>
+        <div class="field-row"><label>权属关系说明</label><input type="text" class="text-input" id="rights-relation" placeholder="如自有/租赁/合作等"></div>
+        <div class="field-row"><label>是否持有产权证</label><div class="flex-options">
+          <div class="flex-option cert-opt" data-v="有">有产权证</div>
+          <div class="flex-option cert-opt" data-v="无">无产权证</div>
+          <div class="flex-option cert-opt" data-v="其他">其他情况</div>
+        </div></div>
+        <div id="cert-has" class="hidden field-row"><label>证件编号</label><input type="text" class="text-input" id="rights-cert-no"></div>
+        <div id="cert-warn" class="hidden warn-box">建议在项目推进前完善权属证明材料</div>
+        <div id="cert-other" class="hidden field-row"><label>情况说明</label><input type="text" class="text-input" id="rights-cert-note"></div>
+        <div class="field-row"><label>备注（选填）</label><input type="text" class="text-input" id="rights-remark"></div>
+          </div></div>
+        </div>
+
+        <div class="collapsible-wrap">
+          <div class="collapsible-header" id="coll-power-hdr"><span class="header-title">电力设施类</span><span class="header-right"><span class="header-summary" id="coll-power-sum"></span><span class="arrow">▼</span></span></div>
+          <div class="collapsible-content"><div class="collapsible-inner"><div id="power-survey"></div></div></div>
+        </div>
+        <div class="collapsible-wrap">
+          <div class="collapsible-header" id="coll-users-hdr"><span class="header-title">用电用户信息</span><span class="header-right"><span class="header-summary" id="coll-users-sum"></span><span class="arrow">▼</span></span></div>
+          <div class="collapsible-content"><div class="collapsible-inner">
+        <div id="users-container"></div>
+        <button type="button" class="btn-add" id="add-user">+ 添加用户</button>
+        <div class="total-row">用户总数：<span id="user-count">0</span> 个 · 总负荷：<span id="user-total-load" class="calc-highlight">0</span> kW · 年总用电量：<span id="user-total-annual" class="calc-highlight">0</span> kWh</div>
+          </div></div>
+        </div>
+        <div class="collapsible-wrap">
+          <div class="collapsible-header" id="coll-comply-hdr"><span class="header-title">合规类</span><span class="header-right"><span class="header-summary" id="coll-comply-sum"></span><span class="arrow">▼</span></span></div>
+          <div class="collapsible-content"><div class="collapsible-inner"><div id="comply-survey"></div></div></div>
+        </div>
+        <div class="collapsible-wrap">
+          <div class="collapsible-header" id="coll-custom-hdr"><span class="header-title">自定义踏勘项</span><span class="header-right"><span class="header-summary" id="coll-custom-sum"></span><span class="arrow">▼</span></span></div>
+          <div class="collapsible-content"><div class="collapsible-inner">
+        <div id="custom-list"></div>
+        <button type="button" class="btn-add" id="add-survey">+ 新增踏勘项目</button>
+        <div id="add-form" class="hidden" style="margin-top:10px;"><input type="text" class="text-input" id="custom-input" placeholder="输入自定义踏勘项"><button type="button" class="btn btn-secondary" id="save-custom" style="margin-top:8px;">保存</button></div>
+          </div></div>
+        </div>
+        <button type="button" class="btn btn-primary btn-next" data-from="s2">下一步</button>
+      </div></div>
     </div>
 
-    <!-- Step 2.5 -->
-    <div class="step-block hidden" id="block-s25" data-step="s25">
-      <div class="step-header collapsed" id="hdr-s25">
-        <span class="step-header-left">Step 2.5 资源估算</span>
-        <span class="step-header-right"><span id="sum-s25"></span><span class="edit-tag">✏️ 修改</span></span>
-      </div>
-      <div class="step-content collapsed" id="cnt-s25">
-        <div class="step-content-inner">
-          <span class="optional-tag">可选模块，可跳过</span>
-          <div id="section-roof" class="hidden"><div class="section-title">屋顶光伏估算</div><div id="roofs-container"></div><button type="button" class="btn-add" id="add-roof">+ 添加屋顶</button></div>
-          <div id="section-ground" class="hidden"><div class="section-title">地面光伏估算</div>
-            <div class="field-row"><label>拟装机容量（kW）</label><div class="input-wrap"><input type="number" id="ground-cap" min="0" step="any"><span class="suffix">kW</span></div></div>
-            <div class="field-row"><label>年利用小时数（h）</label><div class="input-wrap"><input type="number" id="ground-hours" min="0" step="any"><span class="suffix">h</span></div></div>
-            <div class="field-row"><label>系统综合效率（%，75～85）</label><div class="input-wrap"><input type="number" id="ground-eff" value="80" min="0" max="100"><span class="suffix">%</span></div></div>
-            <div class="calc-box">年发电量：<span class="calc-highlight" id="ground-gen">0</span> kWh</div>
-          </div>
-          <div id="section-wind" class="hidden"><div class="section-title">风电估算</div>
-            <div class="field-row"><label>拟装机容量（kW）</label><div class="input-wrap"><input type="number" id="wind-cap" min="0" step="any"><span class="suffix">kW</span></div></div>
-            <div class="field-row"><label>年利用小时数（h）</label><div class="input-wrap"><input type="number" id="wind-hours" min="0" step="any"><span class="suffix">h</span></div></div>
-            <div class="field-row"><label>系统综合效率（%，80～90）</label><div class="input-wrap"><input type="number" id="wind-eff" value="85" min="0" max="100"><span class="suffix">%</span></div></div>
-            <div class="calc-box">年发电量：<span class="calc-highlight" id="wind-gen">0</span> kWh</div>
-          </div>
-          <div class="calc-box" style="margin-top:12px;">合计：总装机 <span class="calc-highlight" id="total-cap">0</span> kW · 总年发电量 <span class="calc-highlight" id="total-gen">0</span> kWh</div>
-          <p class="hint" style="color:var(--text-muted);font-size:12px;">本估算为初步参考，误差范围约±15%，实际以专业勘测为准。</p>
-          <div class="m2-nav">
-            <button type="button" class="btn btn-secondary" id="import-s3">带入 Step 3</button>
-            <button type="button" class="btn btn-outline btn-next" data-from="s25" data-skip="1">跳过此步</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Step 3 -->
     <div class="step-block hidden" id="block-s3" data-step="s3">
       <div class="step-header collapsed" id="hdr-s3">
         <span class="step-header-left">Step 3 资源负荷</span>
-        <span class="step-header-right"><span id="sum-s3"></span><span class="edit-tag">✏️ 修改</span></span>
+        <span class="step-header-right"><span id="sum-s3"></span></span>
       </div>
-      <div class="step-content collapsed" id="cnt-s3">
-        <div class="step-content-inner">
-          <p class="section-title">发电侧</p>
-          <div class="field-row"><label>拟装机容量（kW）<span id="cap-badge" class="imported-badge hidden">已由估算带入</span></label>
-            <div class="input-wrap"><input type="number" id="capacity" min="0" step="any"><span class="suffix">kW</span></div></div>
-          <div class="field-row"><label>年利用小时数（h）</label><div class="input-wrap"><input type="number" id="hours" min="0" step="any"><span class="suffix">h</span></div></div>
-          <div class="field-row"><label>厂用电率（%）</label><div class="input-wrap"><input type="number" id="auxRate" value="5" min="0" max="100"><span class="suffix">%</span></div></div>
-          <div class="field-row"><label>储能装机（kWh，选填）</label><div class="input-wrap"><input type="number" id="storage" min="0" step="any" placeholder="选填"><span class="suffix">kWh</span></div></div>
-          <div class="calc-box">年可用发电量：<span class="calc-highlight" id="annualGen">—</span> kWh<br><span style="font-size:11px;color:var(--text-muted);">= 装机(kW) × 利用小时 × (1-厂用电率%)</span></div>
-          <p class="section-title">用电侧</p>
-          <table class="user-table"><thead><tr><th>用户名称</th><th>功率(kW)</th><th>运行小时</th><th>年用电量</th></tr></thead><tbody id="user-body"></tbody></table>
-          <button type="button" class="btn-add" id="add-user">+ 添加用户</button>
-          <div class="total-row">年总用电量合计：<span id="totalLoad" class="calc-highlight">0</span> kWh</div>
-          <p class="section-title">自发自用估算</p>
-          <div class="flex-options" id="flex-options">
-            <div class="flex-option selected" data-coef="0.85">高（0.85）</div>
-            <div class="flex-option" data-coef="0.75">中（0.75）</div>
-            <div class="flex-option" data-coef="0.65">低（0.65）</div>
-          </div>
-          <div class="calc-box" style="margin-top:10px;">自发自用电量：<span class="calc-highlight" id="selfUse">—</span> kWh<br>上网电量估算：<span class="calc-highlight" id="gridFeed">—</span> kWh</div>
-          <button type="button" class="btn btn-primary btn-next" data-from="s3">下一步</button>
+      <div class="step-content collapsed" id="cnt-s3"><div class="step-content-inner">
+        <div class="section-title">电源装机汇总（来自现场踏勘估算）</div>
+        <div id="s3-gen-detail"></div>
+        <div class="readonly-val">总装机：<span id="s3-total-cap">0</span> kW</div>
+        <div class="readonly-val">总年发电量：<span id="s3-total-gen">0</span> kWh</div>
+        <p class="hint-sm">如需修改，请返回 Step 2 调整参数</p>
+        <div class="section-title">时段用电汇总</div>
+        <table class="user-table" id="slot-table"></table>
+        <div class="chart-wrap"><canvas id="compare-chart" height="220"></canvas></div>
+        <div class="calc-box">日总发电量：<span id="s3-day-gen">0</span> kWh · 日总用电量：<span id="s3-day-load">0</span> kWh<br><span id="s3-surplus-label">余电</span>：<span id="s3-surplus">0</span> kWh · 初步自发自用率：<span id="s3-prelim-rate">0%</span></div>
+        <div class="section-title">自发自用估算</div>
+        <div class="flex-options" id="flex-options">
+          <div class="flex-option selected" data-coef="0.85">高(0.85)</div>
+          <div class="flex-option" data-coef="0.75">中(0.75)</div>
+          <div class="flex-option" data-coef="0.65">低(0.65)</div>
         </div>
-      </div>
+        <div class="calc-box" style="margin-top:10px;">自发自用电量：<span id="s3-self">—</span> kWh · 上网电量：<span id="s3-feed">—</span> kWh</div>
+        <div class="collapsible-wrap">
+          <div class="collapsible-header" id="coll-storage-hdr"><span class="header-title">储能配置优化（可选）</span><span class="header-right"><span class="header-summary" id="coll-storage-sum"></span><span class="arrow">▼</span></span></div>
+          <div class="collapsible-content"><div class="collapsible-inner">
+        <div id="storage-preview"></div>
+        <div class="field-row"><label>储能装机功率(kW)</label><input type="number" step="0.01" class="text-input" id="storage-power"></div>
+        <div class="field-row"><label>储能容量(kWh)</label><input type="number" step="0.01" class="text-input" id="storage-cap"></div>
+        <div class="field-row"><label>年循环次数</label><input type="number" step="0.01" class="text-input" id="storage-cycles" value="300" placeholder="250～365"><p class="hint-sm">提示250～365次/年</p></div>
+        <div id="storage-compare"></div><p class="hint-sm" id="storage-hint"></p>
+          </div></div>
+        </div>
+        <button type="button" class="btn btn-primary btn-next" data-from="s3">下一步</button>
+      </div></div>
     </div>
 
-    <!-- Step 4 -->
     <div class="step-block hidden" id="block-s4" data-step="s4">
       <div class="step-header collapsed" id="hdr-s4">
         <span class="step-header-left">Step 4 合规测算</span>
-        <span class="step-header-right"><span id="sum-s4"></span><span class="edit-tag">✏️ 修改</span></span>
+        <span class="step-header-right"><span id="sum-s4"></span></span>
       </div>
-      <div class="step-content collapsed" id="cnt-s4">
-        <div class="step-content-inner">
-          <div class="calc-box" style="margin-bottom:14px;">年可用发电量 <span id="s4-gen">—</span> kWh · 自发自用 <span id="s4-self">—</span> kWh · 总用电量 <span id="s4-load">—</span> kWh · 上网 <span id="s4-feed">—</span> kWh</div>
-          <div class="field-row"><label>目标年份</label>
-            <div class="year-options" id="year-options">
-              <div class="year-option selected" data-year="before2030">2030年前（含）</div>
-              <div class="year-option" data-year="after2030">2030年后</div>
-            </div>
-          </div>
-          <div id="metrics-container"></div>
-          <div class="result-header pass" id="compliance-header" style="border-radius:8px;margin-top:12px;">
-            <div class="result-icon" id="compliance-icon">✅</div>
-            <div class="result-title" id="compliance-title">—</div>
-          </div>
-          <div class="notice-box" style="margin:12px 0 0;">以上计算基于发改能源〔2026〕688号第二条规划指标。<br>上网电量比例为原则性要求，各省可结合实际调整。</div>
-          <button type="button" class="btn btn-primary btn-next" data-from="s4">下一步</button>
-        </div>
-      </div>
+      <div class="step-content collapsed" id="cnt-s4"><div class="step-content-inner">
+        <div class="field-row"><label>目标年份</label><div class="year-options" id="year-options">
+          <div class="year-option selected" data-year="before2030">2030年前（含）</div>
+          <div class="year-option" data-year="after2030">2030年后</div>
+        </div></div>
+        <div id="metrics-container"></div>
+        <div class="result-header pass" id="compliance-header"><div class="result-title" id="compliance-title">—</div></div>
+        <div class="notice-box">以上计算基于发改能源〔2026〕688号第二条规划指标。上网电量比例为原则性要求，各省可结合实际调整。</div>
+        <button type="button" class="btn btn-primary btn-next" data-from="s4">下一步</button>
+      </div></div>
     </div>
 
-    <!-- Step 5 -->
     <div class="step-block hidden" id="block-s5" data-step="s5">
       <div class="step-header collapsed" id="hdr-s5">
         <span class="step-header-left">Step 5 减排计算</span>
-        <span class="step-header-right"><span id="sum-s5"></span><span class="edit-tag">✏️ 修改</span></span>
+        <span class="step-header-right"><span id="sum-s5"></span></span>
       </div>
-      <div class="step-content collapsed" id="cnt-s5">
-        <div class="step-content-inner">
-          <div class="field-row"><label>自发自用电量（kWh，自动带入）</label><div class="input-wrap"><input type="number" id="emi-selfUse" readonly style="background:#f5f7f6;"><span class="suffix">kWh</span></div></div>
-          <div class="field-row"><label>电网排放因子（kgCO₂/kWh）</label><div class="input-wrap"><input type="number" id="emissionFactor" value="0.5703" step="any"><span class="suffix">kg/kWh</span></div></div>
-          <div class="field-row"><label>项目运营年限（年）</label><div class="input-wrap"><input type="number" id="opYears" value="25" min="1"><span class="suffix">年</span></div></div>
-          <div class="emission-card">
-            <div class="emission-row">🌱 年减排量：<strong id="annualEmission">—</strong> 吨CO₂/年</div>
-            <div class="emission-row">🌳 等效植树：<strong id="trees">—</strong> 万棵/年</div>
-            <div class="emission-row">⚡ 全周期减排：<strong id="lifecycleEmission">—</strong> 万吨CO₂（<span id="lifecycleYears">25</span>年）</div>
-          </div>
-          <button type="button" class="btn btn-primary" id="gen-report">生成评估报告</button>
+      <div class="step-content collapsed" id="cnt-s5"><div class="step-content-inner">
+        <div class="field-row"><label>自发自用电量(kWh)</label><input type="number" step="0.01" class="text-input" id="emi-selfUse" readonly></div>
+        <div class="field-row"><label>电网排放因子(kgCO₂/kWh)</label><input type="number" step="0.0001" class="text-input" id="emissionFactor" value="0.5703"><p class="hint-sm">全国均值参考0.5703</p></div>
+        <div class="field-row"><label>项目运营年限(年)</label><input type="number" step="0.01" class="text-input" id="opYears" value="25"></div>
+        <div class="emission-card">
+          <div class="emission-row">🌱 年减排量：<strong id="annualEmission">—</strong> 吨CO₂/年</div>
+          <div class="emission-row">🌳 等效植树：<strong id="trees">—</strong> 万棵/年</div>
+          <div class="emission-row">⚡ 全周期减排：<strong id="lifecycleEmission">—</strong> 万吨CO₂（<span id="lifecycleYears">25</span>年）</div>
         </div>
-      </div>
+        <button type="button" class="btn btn-primary" id="gen-report">生成评估报告</button>
+      </div></div>
     </div>
 
     <div id="report" class="output-area">
-      <div class="result-card report-card" id="report-print">
-        <div class="report-title">源流绿电直连项目评估报告</div>
+      <div class="report-card" id="report-print">
+        <div class="report-title">源流绿电直连项目现场评估报告</div>
         <div class="report-meta" id="report-meta"></div>
         <div id="report-body"></div>
-        <div class="report-footer-note">源流 · 基于发改能源〔2026〕688号 · 仅供参考，不构成法律意见</div>
       </div>
-      <div class="m2-nav" id="report-actions" style="margin-top:12px;">
+      <div class="m2-nav" id="report-actions">
         <button type="button" class="btn btn-secondary" id="export-pdf">导出 PDF</button>
         <button type="button" class="btn btn-outline" id="reset-calc">重新测算</button>
       </div>
     </div>
 
-    <footer class="footer">源流 · 基于发改能源〔2026〕688号 · 仅供参考，不构成法律意见</footer>
-  </div>
-  <script>
+    <div id="date-modal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-title">选择踏勘日期</div>
+        <div class="date-wheel-wrap">
+          <div class="date-wheel-col" id="modal-year"><div class="date-wheel-list"></div></div>
+          <div class="date-wheel-col" id="modal-month"><div class="date-wheel-list"></div></div>
+          <div class="date-wheel-col" id="modal-day"><div class="date-wheel-list"></div></div>
+          <div class="date-wheel-mask"></div>
+        </div>
+        <div class="btn-row"><button type="button" class="btn btn-outline" id="date-cancel">取消</button><button type="button" class="btn btn-secondary" id="date-confirm">确定</button></div>
+      </div>
+    </div>
+
+<footer class="footer">源流 · 基于发改能源〔2026〕688号 · 仅供参考，不构成法律意见</footer>
+</div>
+<script>
 (function () {
   'use strict';
 
   function $(id) { return document.getElementById(id); }
-  function show(el) { el.classList.remove('hidden'); }
-  function hide(el) { el.classList.add('hidden'); }
+  function show(el) { if (el) el.classList.remove('hidden'); }
+  function hide(el) { if (el) el.classList.add('hidden'); }
   function pct(n) { return (n * 100).toFixed(1) + '%'; }
   function fmt(n) { return Math.round(n).toLocaleString('zh-CN'); }
+  function num(v) { return parseFloat(v) || 0; }
+  function collHTML(title, summary, inner) {
+    return '<div class="collapsible-wrap">' +
+      '<div class="collapsible-header"><span class="header-title">'+title+'</span>' +
+      '<span class="header-right"><span class="header-summary">'+(summary||'')+'</span><span class="arrow">▼</span></span></div>' +
+      '<div class="collapsible-content"><div class="collapsible-inner">'+inner+'</div></div></div>';
+  }
+  function bindCollapsible(headerEl) {
+    if (headerEl.dataset.collBound) return;
+    headerEl.dataset.collBound = '1';
+    headerEl.addEventListener('click', function(e) {
+      var t = e.target;
+      if (t.tagName === 'BUTTON' || (t.closest && t.closest('button'))) return;
+      if (t.tagName === 'A') return;
+      this.classList.toggle('open');
+    });
+  }
+  function bindCollapsibles(root) {
+    var scope = root || document;
+    var headers = scope.querySelectorAll ? scope.querySelectorAll('.collapsible-header') : [];
+    for (var i = 0; i < headers.length; i++) {
+      bindCollapsible(headers[i]);
+    }
+  }
+  function setCollSummary(headerId, summaryText) {
+    var el = $(headerId);
+    if (el) {
+      var s = el.querySelector('.header-summary');
+      if (s) s.textContent = summaryText || '';
+    }
+  }
+  function updateRightsSummary() {
+    var owner = $('rights-owner') ? $('rights-owner').value : '';
+    var cert = state.rights.certType || '未选';
+    setCollSummary('coll-rights-hdr', owner ? ('权属人：'+owner+' · 产权证：'+cert) : '');
+  }
+  function updateStorageSummary() {
+    var p = num($('storage-power') ? $('storage-power').value : 0);
+    var c = num($('storage-cap') ? $('storage-cap').value : 0);
+    setCollSummary('coll-storage-hdr', (p||c) ? (p+'kW · '+c+'kWh') : '');
+  }
+  function updatePowerSurveySummary() {
+    var d = getSurveyDone();
+    var pw = document.querySelectorAll('.sv-check').length;
+    var done = 0;
+    document.querySelectorAll('.sv-check').forEach(function(el){ if(el.checked) done++; });
+    setCollSummary('coll-power-hdr', done ? ('已完成'+done+'项') : '');
+  }
+  function updateComplySurveySummary() {
+    var done = 0;
+    document.querySelectorAll('.sv-check2').forEach(function(el){ if(el.checked) done++; });
+    setCollSummary('coll-comply-hdr', done ? ('已完成'+done+'项') : '');
+  }
+  function updateCustomSurveySummary() {
+    setCollSummary('coll-custom-hdr', state.customSurveys.length ? (state.customSurveys.length+'项自定义') : '');
+  }
+  function calcBioGen() {
+    return num($('bio-cap').value)*num($('bio-hours').value)*(1-num($('bio-aux').value)/100);
+  }
+
 
   var STEPS = [
     { id: 's1', num: '1', label: '基本信息' },
-    { id: 's2', num: '2', label: '踏勘清单' },
-    { id: 's25', num: '2.5', label: '资源估算' },
+    { id: 's2', num: '2', label: '现场踏勘' },
     { id: 's3', num: '3', label: '资源负荷' },
     { id: 's4', num: '4', label: '合规测算' },
     { id: 's5', num: '5', label: '减排计算' }
   ];
 
-  var state = {
-    current: 's1',
-    completed: {},
-    projectType: '',
-    energyTypes: [],
-    siteTypes: [],
-    customSurveys: [],
-    roofs: [],
-    ground: { cap: 0, hours: 0, eff: 80 },
-    wind: { cap: 0, hours: 0, eff: 85 },
-    users: [{ name: '', power: 0, hours: 0 }],
-    flexCoef: 0.85,
-    calcYear: 'before2030',
-    fromEstimate: false,
-    step3Data: null,
-    complianceResult: null,
-    emissionResult: null,
-    dateY: 2026, dateM: 1, dateD: 1
-  };
+  var SLOT_LABELS = ['00-02','02-04','04-06','06-08','08-10','10-12','12-14','14-16','16-18','18-20','20-22','22-24'];
+  var PV_WEIGHTS = [0,0,0.02,0.08,0.15,0.20,0.22,0.18,0.10,0.05,0,0];
 
   var ROOF_TYPES = [
-    { id: 'flat', label: '平屋顶', ref: '0.65～0.75', defaultCoef: 0.70 },
-    { id: 'slope', label: '坡屋顶（朝南）', ref: '0.80～0.90', defaultCoef: 0.85 },
-    { id: 'saw', label: '锯齿形厂房', ref: '0.55～0.65', defaultCoef: 0.60 },
-    { id: 'steel', label: '彩钢瓦屋顶', ref: '0.75～0.85', defaultCoef: 0.80 }
+    { id: 'flat', label: '平屋顶', ref: '0.65～0.75', coef: 0.70 },
+    { id: 'slope', label: '坡屋顶朝南', ref: '0.80～0.90', coef: 0.85 },
+    { id: 'saw', label: '锯齿形厂房', ref: '0.55～0.65', coef: 0.60 },
+    { id: 'steel', label: '彩钢瓦屋顶', ref: '0.75～0.85', coef: 0.80 }
   ];
   var ORIENTATIONS = [
-    { id: 'south', label: '正南', ref: '1.00', defaultCoef: 1.00 },
-    { id: 'se15', label: '南偏东15°', ref: '0.97～0.99', defaultCoef: 0.98 },
-    { id: 'sw15', label: '南偏西15°', ref: '0.97～0.99', defaultCoef: 0.98 },
-    { id: 'se30', label: '南偏东30°', ref: '0.92～0.95', defaultCoef: 0.93 },
-    { id: 'sw30', label: '南偏西30°', ref: '0.92～0.95', defaultCoef: 0.93 },
-    { id: 'east', label: '东向', ref: '0.82～0.88', defaultCoef: 0.85 },
-    { id: 'west', label: '西向', ref: '0.82～0.88', defaultCoef: 0.85 },
-    { id: 'north', label: '北向', ref: '0.65～0.75', defaultCoef: 0.70 }
+    { id: 'south', label: '正南', ref: '1.00', coef: 1.00 },
+    { id: 'se15', label: '南偏东15°', ref: '0.97～0.99', coef: 0.98 },
+    { id: 'sw15', label: '南偏西15°', ref: '0.97～0.99', coef: 0.98 },
+    { id: 'se30', label: '南偏东30°', ref: '0.92～0.95', coef: 0.93 },
+    { id: 'sw30', label: '南偏西30°', ref: '0.92～0.95', coef: 0.93 },
+    { id: 'east', label: '东向', ref: '0.82～0.88', coef: 0.85 },
+    { id: 'west', label: '西向', ref: '0.82～0.88', coef: 0.85 },
+    { id: 'north', label: '北向', ref: '0.65～0.75', coef: 0.70 }
   ];
-  var SURVEY_GROUPS = [
-    { name: '场地条件类', items: [
-      { id: 'sv_area', label: '场地面积测量', type: 'number', unit: 'm²' },
-      { id: 'sv_terrain', label: '地形地貌记录', type: 'text' },
-      { id: 'sv_obstacle', label: '周边障碍物遮挡评估', type: 'text' },
-      { id: 'sv_land', label: '土地权属确认', type: 'none' }
-    ]},
-    { name: '电力设施类', items: [
-      { id: 'sv_power', label: '现有配电设施情况', type: 'text' },
-      { id: 'sv_voltage', label: '并网点电压等级', type: 'number', unit: 'kV' },
-      { id: 'sv_grid', label: '周边电网接入条件', type: 'text' },
-      { id: 'sv_meter', label: '计量装置现状', type: 'text' },
-      { id: 'sv_storage', label: '储能配置空间评估', type: 'none' }
-    ]},
-    { name: '负荷侧类', items: [
-      { id: 'sv_users', label: '用户数量确认', type: 'number', unit: '个' },
-      { id: 'sv_qualify', label: '各用户法人资质核查', type: 'none' },
-      { id: 'sv_load', label: '各用户用电负荷测量', type: 'number', unit: 'kW' },
-      { id: 'sv_schedule', label: '用电时段分布记录', type: 'none' },
-      { id: 'sv_flex', label: '负荷灵活性评估', type: 'none' }
-    ]},
-    { name: '合规类', items: [
-      { id: 'sv_usertype', label: '用户类型确认（非居民/非农业）', type: 'none' },
-      { id: 'sv_policy', label: '产业政策合规性核查', type: 'none' },
-      { id: 'sv_entity', label: '主责单位法人资格确认', type: 'none' },
-      { id: 'sv_province', label: '省级能源主管部门沟通情况', type: 'none' }
-    ]}
-  ];
+  var GROUND_TYPES = ['地面','荒地','鱼塘','农业大棚'];
+  var GREEN_DEMAND = ['有绿电比例要求','重点用能企业','碳排放企业','出口外向型','算力设施','绿氢氨醇','其他'];
 
-  /* ===== Progress bar ===== */
+  var state = {
+    current: 's1', completed: {}, projectType: '',
+    roofs: [], groundAreas: {}, wind: { desc:'', cap:0, hours:0, eff:85 },
+    biomass: { desc:'', cap:0, hours:0, auxRate:5 },
+    otherSite: { typeDesc:'', desc:'', cap:0, gen:0 },
+    users: [], customSurveys: [],
+    flexCoef: 0.85, calcYear: 'before2030',
+    rights: { owner:'', relation:'', certType:'', certNo:'', certNote:'', remark:'' },
+    step3: null, compliance: null, emission: null,
+    dateY: 2026, dateM: 5, dateD: 21,
+    chart: null, reportChart: null
+  };
+
+  function createUser() {
+    return {
+      id: 'u' + Date.now() + Math.random(),
+      name: '', load: 0, annualKwh: 0, monthlyKwh: 0, monthlyManual: false,
+      bill: '', slots: [0,0,0,0,0,0,0,0,0,0,0,0], opDays: 365,
+      isResident: '否', isAgri: '否', hasLegal: '是', policy: '符合', greenType: '其他'
+    };
+  }
+
+  function createRoof() {
+    return { id:'r'+Date.now(), roofType:'flat', areaCoef:0.70, totalArea:0, orientation:'south', orientCoef:1.0, shadeCoef:0.95, powerDensity:100, sunHours:4.5 };
+  }
+
+  function createGroundArea(type) {
+    return { id:'g'+Date.now(), type:type, desc:'', area:0, cap:0, hours:0 };
+  }
+
+  /* ===== Progress ===== */
   function renderProgress() {
-    var curIdx = -1;
-    for (var i = 0; i < STEPS.length; i++) { if (STEPS[i].id === state.current) { curIdx = i; break; } }
     var html = '';
-    for (var j = 0; j < STEPS.length; j++) {
-      var s = STEPS[j];
+    for (var i = 0; i < STEPS.length; i++) {
+      var s = STEPS[i];
       var cls = 'sp-node';
       var dot = s.num;
       if (state.completed[s.id]) { cls += ' done'; dot = '✓'; }
       else if (s.id === state.current) cls += ' current';
-      html += '<div class="' + cls + '"><div class="sp-dot">' + dot + '</div><div class="sp-label">' + s.label + '</div></div>';
-      if (j < STEPS.length - 1) {
-        html += '<div class="sp-line' + (state.completed[s.id] ? ' done' : '') + '"></div>';
+      html += '<div class="'+cls+'"><div class="sp-dot">'+dot+'</div><div class="sp-label">'+s.label+'</div></div>';
+      if (i < STEPS.length - 1) {
+        html += '<div class="sp-line'+(state.completed[s.id]?' done':'')+'"></div>';
       }
     }
     $('step-progress').innerHTML = html;
   }
 
-  /* ===== Step collapse ===== */
-  function collapseStep(stepId, summary) {
-    state.completed[stepId] = true;
-    var hdr = $('hdr-' + stepId);
-    var cnt = $('cnt-' + stepId);
+  function collapseStep(sid, summary) {
+    state.completed[sid] = true;
+    var hdr = $('hdr-'+sid), cnt = $('cnt-'+sid);
     hdr.className = 'step-header collapsed';
-    hdr.querySelector('.step-header-left').textContent = '✓ ' + hdr.querySelector('.step-header-left').textContent.replace(/^✓ /, '');
-    if (summary && $('sum-' + stepId)) $('sum-' + stepId).textContent = summary;
-    cnt.classList.add('collapsed');
+    var left = hdr.querySelector('.step-header-left');
+    if (left.textContent.indexOf('✓') !== 0) left.textContent = '✓ ' + left.textContent;
+    var sumEl = $('sum-'+sid);
+    if (sumEl && summary) sumEl.textContent = summary;
     var right = hdr.querySelector('.step-header-right');
     if (right && !right.querySelector('.edit-tag')) {
-      var edit = document.createElement('span');
-      edit.className = 'edit-tag';
-      edit.textContent = '✏️ 修改';
-      right.appendChild(edit);
+      var e = document.createElement('span'); e.className = 'edit-tag'; e.textContent = '✏️ 修改'; right.appendChild(e);
     }
+    cnt.classList.add('collapsed');
     renderProgress();
   }
 
-  function expandStep(stepId) {
-    state.current = stepId;
-    var hdr = $('hdr-' + stepId);
-    var cnt = $('cnt-' + stepId);
+  function expandStep(sid) {
+    state.current = sid;
+    var hdr = $('hdr-'+sid), cnt = $('cnt-'+sid);
     hdr.className = 'step-header expanded';
-    var left = hdr.querySelector('.step-header-left');
-    left.textContent = left.textContent.replace(/^✓ /, '');
+    hdr.querySelector('.step-header-left').textContent = hdr.querySelector('.step-header-left').textContent.replace(/^✓ /,'');
     cnt.classList.remove('collapsed');
-    show($('block-' + stepId));
+    show($('block-'+sid));
     renderProgress();
-    setTimeout(function () { $('block-' + stepId).scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
+    if (sid === 's3') renderStep3();
   }
 
-  function bindStepHeaders() {
+  function bindHeaders() {
     for (var i = 0; i < STEPS.length; i++) {
-      (function (sid) {
-        $('hdr-' + sid).addEventListener('click', function () {
+      (function(sid) {
+        $('hdr-'+sid).addEventListener('click', function() {
           if (this.classList.contains('collapsed')) expandStep(sid);
         });
       })(STEPS[i].id);
     }
   }
 
-  function advanceTo(nextId) {
-    show($('block-' + nextId));
-    expandStep(nextId);
+  function advanceTo(sid) {
+    show($('block-'+sid));
+    expandStep(sid);
+    setTimeout(function() { $('block-'+sid).scrollIntoView({behavior:'smooth',block:'start'}); }, 80);
   }
 
-  /* ===== Date wheel ===== */
-  function daysInMonth(y, m) {
-    return new Date(y, m, 0).getDate();
+  /* ===== Date modal ===== */
+  function pad2(n) { return n < 10 ? '0'+n : ''+n; }
+  function updateDateDisplay() {
+    $('date-display').textContent = state.dateY + '年' + state.dateM + '月' + state.dateD + '日  ✏️';
+    $('surveyDate').value = state.dateY + '-' + pad2(state.dateM) + '-' + pad2(state.dateD);
   }
 
-  function updateHiddenDate() {
-    var mm = state.dateM < 10 ? '0' + state.dateM : '' + state.dateM;
-    var dd = state.dateD < 10 ? '0' + state.dateD : '' + state.dateD;
-    $('surveyDate').value = state.dateY + '-' + mm + '-' + dd;
-  }
+  function daysInMonth(y,m) { return new Date(y,m,0).getDate(); }
 
-  function buildWheel(colId, items, selectedIdx, onSelect) {
-    var col = $(colId);
-    var list = col.querySelector('.date-wheel-list');
+  function buildWheel(colId, items, idx, cb) {
+    var col = $(colId), list = col.querySelector('.date-wheel-list');
     var html = '';
     for (var i = 0; i < items.length; i++) {
-      html += '<div class="date-wheel-item' + (i === selectedIdx ? ' active' : '') + '" data-idx="' + i + '">' + items[i] + '</div>';
+      html += '<div class="date-wheel-item'+(i===idx?' active':'')+'" data-i="'+i+'">'+items[i]+'</div>';
     }
     list.innerHTML = html;
-    list.style.transform = 'translateY(' + (-selectedIdx * 36) + 'px)';
-
-    var startY = 0, startIdx = selectedIdx, dragging = false;
-    function setIdx(idx) {
-      idx = Math.max(0, Math.min(items.length - 1, idx));
-      onSelect(idx);
-      buildWheel(colId, items, idx, onSelect);
-    }
-    list.addEventListener('touchstart', function (e) {
-      dragging = true; startY = e.touches[0].clientY; startIdx = selectedIdx;
-    }, { passive: true });
-    list.addEventListener('touchmove', function (e) {
-      if (!dragging) return;
-      var dy = e.touches[0].clientY - startY;
-      var idx = Math.round(startIdx - dy / 36);
-      idx = Math.max(0, Math.min(items.length - 1, idx));
-      list.style.transform = 'translateY(' + (-idx * 36) + 'px)';
-    }, { passive: true });
-    list.addEventListener('touchend', function (e) {
-      if (!dragging) return;
-      dragging = false;
-      var dy = (e.changedTouches[0].clientY - startY);
-      setIdx(Math.round(startIdx - dy / 36));
-    });
-    col.addEventListener('wheel', function (e) {
-      e.preventDefault();
-      setIdx(selectedIdx + (e.deltaY > 0 ? 1 : -1));
-    });
-    var itemEls = list.querySelectorAll('.date-wheel-item');
-    for (var j = 0; j < itemEls.length; j++) {
-      itemEls[j].addEventListener('click', function () {
-        setIdx(parseInt(this.getAttribute('data-idx'), 10));
-      });
-    }
+    list.style.transform = 'translateY('+(-idx*36)+'px)';
+    var startY=0, startIdx=idx, drag=false;
+    function setIdx(n) { n=Math.max(0,Math.min(items.length-1,n)); cb(n); refreshWheels(); }
+    list.ontouchstart = function(e){ drag=true; startY=e.touches[0].clientY; startIdx=idx; };
+    list.ontouchmove = function(e){ if(!drag)return; var n=Math.round(startIdx-(e.touches[0].clientY-startY)/36); n=Math.max(0,Math.min(items.length-1,n)); list.style.transform='translateY('+(-n*36)+'px)'; };
+    list.ontouchend = function(e){ if(!drag)return; drag=false; setIdx(Math.round(startIdx-(e.changedTouches[0].clientY-startY)/36)); };
+    col.onwheel = function(e){ e.preventDefault(); setIdx(idx+(e.deltaY>0?1:-1)); };
+    var els = list.querySelectorAll('.date-wheel-item');
+    for (var j=0;j<els.length;j++) els[j].onclick = function(){ setIdx(parseInt(this.getAttribute('data-i'),10)); };
   }
 
-  function initDateWheel() {
-    var now = new Date();
-    state.dateY = now.getFullYear();
-    state.dateM = now.getMonth() + 1;
-    state.dateD = now.getDate();
-    var years = [];
-    for (var y = 2020; y <= 2030; y++) years.push(y + '年');
-    var months = [];
-    for (var m = 1; m <= 12; m++) months.push(m + '月');
-    function renderDayWheel() {
-      var days = [];
-      var maxD = daysInMonth(state.dateY, state.dateM);
-      if (state.dateD > maxD) state.dateD = maxD;
-      for (var d = 1; d <= maxD; d++) days.push(d + '日');
-      buildWheel('wheel-day', days, state.dateD - 1, function (idx) {
-        state.dateD = idx + 1; updateHiddenDate(); renderDayWheel();
-      });
-    }
-    buildWheel('wheel-year', years, state.dateY - 2020, function (idx) {
-      state.dateY = 2020 + idx; updateHiddenDate(); renderDayWheel();
-    });
-    buildWheel('wheel-month', months, state.dateM - 1, function (idx) {
-      state.dateM = idx + 1; updateHiddenDate(); renderDayWheel();
-    });
-    renderDayWheel();
-    updateHiddenDate();
+  var wheelState = { y:2026, m:5, d:21 };
+  function refreshWheels() {
+    var years=[], i;
+    for(i=2020;i<=2035;i++) years.push(i+'年');
+    var months=[]; for(i=1;i<=12;i++) months.push(i+'月');
+    var maxD=daysInMonth(wheelState.y,wheelState.m);
+    if(wheelState.d>maxD) wheelState.d=maxD;
+    var days=[]; for(i=1;i<=maxD;i++) days.push(i+'日');
+    buildWheel('modal-year', years, wheelState.y-2020, function(n){ wheelState.y=2020+n; refreshWheels(); });
+    buildWheel('modal-month', months, wheelState.m-1, function(n){ wheelState.m=n+1; refreshWheels(); });
+    buildWheel('modal-day', days, wheelState.d-1, function(n){ wheelState.d=n+1; });
   }
+
+  $('date-display').addEventListener('click', function() {
+    wheelState.y=state.dateY; wheelState.m=state.dateM; wheelState.d=state.dateD;
+    refreshWheels(); show($('date-modal'));
+  });
+  $('date-cancel').onclick = function(){ hide($('date-modal')); };
+  $('date-confirm').onclick = function(){
+    state.dateY=wheelState.y; state.dateM=wheelState.m; state.dateD=wheelState.d;
+    updateDateDisplay(); hide($('date-modal'));
+  };
 
   /* ===== Option cards ===== */
-  function bindOptionCards(containerId, onSelect) {
-    var container = $(containerId);
-    var cards = container.querySelectorAll('.option-card');
-    for (var i = 0; i < cards.length; i++) {
-      cards[i].addEventListener('click', function () {
-        var all = container.querySelectorAll('.option-card');
-        for (var j = 0; j < all.length; j++) all[j].classList.remove('selected');
-        this.classList.add('selected');
-        var radio = this.querySelector('input[type="radio"]');
-        radio.checked = true;
-        if (onSelect) onSelect(radio.value);
-      });
-    }
+  function bindOptionCards(cid, cb) {
+    var c=$(cid), cards=c.querySelectorAll('.option-card');
+    for(var i=0;i<cards.length;i++) cards[i].addEventListener('click', function(){
+      var all=c.querySelectorAll('.option-card'); for(var j=0;j<all.length;j++) all[j].classList.remove('selected');
+      this.classList.add('selected'); this.querySelector('input').checked=true; if(cb) cb(this.querySelector('input').value);
+    });
   }
+  bindOptionCards('type-cards', function(v){ state.projectType=v; });
 
-  bindOptionCards('type-cards', function (v) { state.projectType = v; });
+  function energyTypes() {
+    var t=[];
+    if($('en-solar').checked) t.push('solar');
+    if($('en-wind').checked) t.push('wind');
+    if($('en-biomass').checked) t.push('biomass');
+    if($('en-combo').checked) t.push('combo');
+    return t;
+  }
+  function hasSolar(){ var e=energyTypes(); for(var i=0;i<e.length;i++) if(e[i]==='solar'||e[i]==='combo') return true; return false; }
+  function hasWind(){ var e=energyTypes(); for(var i=0;i<e.length;i++) if(e[i]==='wind'||e[i]==='combo') return true; return false; }
+  function hasBiomass(){ var e=energyTypes(); for(var i=0;i<e.length;i++) if(e[i]==='biomass'||e[i]==='combo') return true; return false; }
 
-  function collectEnergyTypes() {
-    var t = [];
-    if ($('en-solar').checked) t.push('solar');
-    if ($('en-wind').checked) t.push('wind');
-    if ($('en-biomass').checked) t.push('biomass');
-    if ($('en-combo').checked) t.push('combo');
+  function siteTypes() {
+    var t=[];
+    document.querySelectorAll('.site-type').forEach(function(el){ if(el.checked) t.push(el.value); });
     return t;
   }
 
-  function collectSiteTypes() {
-    var t = [];
-    var els = document.querySelectorAll('.site-type');
-    for (var i = 0; i < els.length; i++) if (els[i].checked) t.push(els[i].value);
-    return t;
+  function updateRefHints() {
+    hide($('hint-solar')); hide($('hint-wind')); hide($('hint-biomass'));
+    if(hasSolar()) show($('hint-solar'));
+    if(hasWind()) show($('hint-wind'));
+    if(hasBiomass()) show($('hint-biomass'));
   }
 
-  function hasSolar() {
-    var e = collectEnergyTypes();
-    for (var i = 0; i < e.length; i++) if (e[i] === 'solar' || e[i] === 'combo') return true;
-    return false;
-  }
-  function hasWind() {
-    var e = collectEnergyTypes();
-    for (var i = 0; i < e.length; i++) if (e[i] === 'wind' || e[i] === 'combo') return true;
-    return false;
-  }
-  function hasRoofSite() {
-    var s = collectSiteTypes();
-    for (var i = 0; i < s.length; i++) if (s[i] === '屋顶') return true;
-    return false;
-  }
-  function hasGroundSite() {
-    var s = collectSiteTypes();
-    var g = ['地面', '荒地', '鱼塘', '农业大棚'];
-    for (var i = 0; i < s.length; i++) {
-      for (var j = 0; j < g.length; j++) if (s[i] === g[j]) return true;
-    }
-    return false;
-  }
+  document.querySelectorAll('#s1-energy input').forEach(function(el){ el.addEventListener('change', updateRefHints); });
 
-  function needsStep25() {
-    return (hasSolar() && hasRoofSite()) || (hasSolar() && hasGroundSite()) || hasWind();
-  }
-
-  function updateEstimateSections() {
-    var showRoof = hasSolar() && hasRoofSite();
-    var showGround = hasSolar() && hasGroundSite();
-    var showWind = hasWind();
-    if (showRoof) { show($('section-roof')); if (state.roofs.length === 0) { state.roofs = [createRoof()]; renderRoofs(); } }
-    else hide($('section-roof'));
-    if (showGround) show($('section-ground')); else hide($('section-ground'));
-    if (showWind) show($('section-wind')); else hide($('section-wind'));
-  }
-
-  /* ===== Survey ===== */
-  function renderSurveyList() {
-    var html = '';
-    for (var g = 0; g < SURVEY_GROUPS.length; g++) {
-      var group = SURVEY_GROUPS[g];
-      html += '<div class="survey-group"><div class="survey-group-title">' + group.name + '</div>';
-      for (var j = 0; j < group.items.length; j++) {
-        var item = group.items[j];
-        html += '<div class="survey-item"><div class="survey-item-head"><input type="checkbox" id="' + item.id + '" class="sv-check"><label for="' + item.id + '">' + item.label + '</label></div>';
-        if (item.type !== 'none') {
-          html += '<div class="survey-item-extra">';
-          if (item.type === 'number') html += '<div class="input-wrap"><input type="number" id="' + item.id + '-val" step="any"><span class="suffix">' + (item.unit || '') + '</span></div>';
-          else if (item.type === 'text') html += '<input type="text" class="text-input" id="' + item.id + '-val">';
-          html += '</div>';
-        }
-        html += '</div>';
-      }
-      html += '</div>';
-    }
-    $('survey-list').innerHTML = html;
-    var checks = document.querySelectorAll('.sv-check');
-    for (var c = 0; c < checks.length; c++) checks[c].addEventListener('change', updateSurveyProgress);
-    updateSurveyProgress();
-  }
-
-  function getSurveyTotal() {
-    return document.querySelectorAll('#survey-list .sv-check').length + state.customSurveys.length;
-  }
-  function getSurveyDone() {
-    var done = 0;
-    var checks = document.querySelectorAll('#survey-list .sv-check, #custom-list .sv-check');
-    for (var i = 0; i < checks.length; i++) if (checks[i].checked) done++;
-    return done;
-  }
-  function updateSurveyProgress() {
-    var total = getSurveyTotal(), done = getSurveyDone();
-    $('progress-text').textContent = '已完成 ' + done + ' / ' + total + ' 项';
-    $('progress-fill').style.width = (total > 0 ? done / total * 100 : 0) + '%';
-  }
-
-  function renderCustomSurveys() {
-    var html = '';
-    for (var i = 0; i < state.customSurveys.length; i++) {
-      var cs = state.customSurveys[i];
-      html += '<div class="survey-item"><div class="survey-item-head"><input type="checkbox" id="custom-' + cs.id + '" class="sv-check"><label for="custom-' + cs.id + '">' + cs.label + '（自定义）</label></div></div>';
-    }
-    $('custom-list').innerHTML = html;
-    var checks = $('custom-list').querySelectorAll('.sv-check');
-    for (var c = 0; c < checks.length; c++) {
-      checks[c].addEventListener('change', function () {
-        var id = this.id.replace('custom-', '');
-        for (var k = 0; k < state.customSurveys.length; k++) {
-          if (state.customSurveys[k].id === id) state.customSurveys[k].checked = this.checked;
-        }
-        updateSurveyProgress();
-      });
-    }
-    updateSurveyProgress();
-  }
-
-  $('add-survey').addEventListener('click', function () {
-    if (state.customSurveys.length >= 10) { alert('最多新增10项'); return; }
-    show($('add-form'));
-  });
-  $('save-custom').addEventListener('click', function () {
-    var text = $('custom-input').value.trim();
-    if (!text) return;
-    state.customSurveys.push({ id: 'c' + Date.now(), label: text, checked: false });
-    $('custom-input').value = '';
-    hide($('add-form'));
-    renderCustomSurveys();
-  });
-
-  /* ===== Roof ===== */
-  function createRoof() {
-    return { id: 'r' + Date.now(), roofType: 'flat', areaCoef: 0.70, totalArea: 0, orientation: 'south', orientCoef: 1.0, shadeCoef: 0.95, powerDensity: 100, sysEfficiency: 80, sunHours: 4.5 };
-  }
-
+  /* ===== Roof calc ===== */
   function calcRoof(r) {
-    var areaCoef = parseFloat(r.areaCoef) || 0;
-    var totalArea = parseFloat(r.totalArea) || 0;
-    var orientCoef = parseFloat(r.orientCoef) || 0;
-    var shadeCoef = parseFloat(r.shadeCoef) || 0;
-    var powerDensity = parseFloat(r.powerDensity) || 0;
-    var sysEff = (parseFloat(r.sysEfficiency) || 0) / 100;
-    var sunHours = parseFloat(r.sunHours) || 0;
-    var usableArea = totalArea * areaCoef;
-    var capKw = usableArea * powerDensity * orientCoef / 1000;
-    var peakHours = sunHours * 365;
-    var annualKwh = capKw * peakHours * sysEff * shadeCoef;
-    return { usableArea: usableArea, capKw: capKw, peakHours: peakHours, annualKwh: annualKwh };
+    var ua=num(r.totalArea)*num(r.areaCoef);
+    var cap=ua*num(r.powerDensity)*num(r.orientCoef)/1000;
+    var effHours=num(r.sunHours)*365;
+    var gen=cap*effHours*num(r.shadeCoef);
+    return {ua:ua,cap:cap,effHours:effHours,gen:gen};
   }
 
   function renderRoofs() {
-    var html = '';
-    for (var i = 0; i < state.roofs.length; i++) {
-      var r = state.roofs[i], c = calcRoof(r);
-      html += '<div class="roof-card"><div class="roof-card-title">屋顶 ' + (i + 1);
-      if (state.roofs.length > 1) html += '<button type="button" class="btn-sm del-roof" data-idx="' + i + '">删除</button>';
-      html += '</div><div class="field-row"><label>屋顶类型</label><div class="mini-cards">';
-      for (var t = 0; t < ROOF_TYPES.length; t++) {
-        var rt = ROOF_TYPES[t];
-        html += '<div class="mini-card rt-opt' + (r.roofType === rt.id ? ' selected' : '') + '" data-idx="' + i + '" data-type="' + rt.id + '">' + rt.label + ' <span class="ref-tag">' + rt.ref + '</span></div>';
+    var box=$('roofs-container'), html='', totalCap=0, totalGen=0, i;
+    for(i=0;i<state.roofs.length;i++) {
+      var r=state.roofs[i], c=calcRoof(r);
+      totalCap+=c.cap; totalGen+=c.gen;
+      var roofInner='';
+      if(state.roofs.length>1) roofInner+='<div style="text-align:right;margin-bottom:8px;"><button type="button" class="btn-sm del-roof" data-i="'+i+'">删除</button></div>';
+      roofInner+='<div class="field-row"><label>屋顶类型</label><div class="mini-cards">';
+      for(var t=0;t<ROOF_TYPES.length;t++) {
+        var rt=ROOF_TYPES[t];
+        roofInner+='<div class="mini-card rt-pick'+(r.roofType===rt.id?' selected':'')+'" data-i="'+i+'" data-t="'+rt.id+'">'+rt.label+' <span class="ref">'+rt.ref+'</span></div>';
       }
-      html += '</div></div>';
-      html += '<div class="field-row"><label>可用面积系数</label><div class="input-wrap"><input type="number" class="rf-in" data-idx="' + i + '" data-f="areaCoef" step="0.01" value="' + r.areaCoef + '"></div></div>';
-      html += '<div class="field-row"><label>屋顶总面积(m²)</label><div class="input-wrap"><input type="number" class="rf-in" data-idx="' + i + '" data-f="totalArea" value="' + (r.totalArea || '') + '"></div></div>';
-      html += '<div class="field-row"><label>朝向</label><div class="mini-cards">';
-      for (var o = 0; o < ORIENTATIONS.length; o++) {
-        var ori = ORIENTATIONS[o];
-        html += '<div class="mini-card or-opt' + (r.orientation === ori.id ? ' selected' : '') + '" data-idx="' + i + '" data-ori="' + ori.id + '">' + ori.label + ' <span class="ref-tag">' + ori.ref + '</span></div>';
+      roofInner+='</div></div>';
+      roofInner+='<div class="field-row"><label>可用面积系数</label><input type="number" step="0.01" class="text-input rf" data-i="'+i+'" data-f="areaCoef" value="'+r.areaCoef+'"></div>';
+      roofInner+='<div class="field-row"><label>屋顶总面积(m²)</label><input type="number" step="0.01" class="text-input rf" data-i="'+i+'" data-f="totalArea" value="'+(r.totalArea||'')+'"></div>';
+      roofInner+='<div class="field-row"><label>朝向</label><div class="mini-cards">';
+      for(var o=0;o<ORIENTATIONS.length;o++) {
+        var ori=ORIENTATIONS[o];
+        roofInner+='<div class="mini-card or-pick'+(r.orientation===ori.id?' selected':'')+'" data-i="'+i+'" data-o="'+ori.id+'">'+ori.label+' <span class="ref">'+ori.ref+'</span></div>';
       }
-      html += '</div></div>';
-      html += '<div class="field-row"><label>朝向系数</label><div class="input-wrap"><input type="number" class="rf-in" data-idx="' + i + '" data-f="orientCoef" step="0.01" value="' + r.orientCoef + '"></div></div>';
-      html += '<div class="shading-ref">遮挡参考：无遮挡0.98～1.00 · 轻微0.92～0.97 · 中等0.85～0.91 · 较严重0.75～0.84 · 严重&lt;0.75</div>';
-      html += '<div class="field-row"><label>遮挡系数</label><div class="input-wrap"><input type="number" class="rf-in" data-idx="' + i + '" data-f="shadeCoef" step="0.01" value="' + r.shadeCoef + '"></div></div>';
-      html += '<div class="field-row"><label>功率密度(Wp/m²)</label><div class="input-wrap"><input type="number" class="rf-in" data-idx="' + i + '" data-f="powerDensity" value="' + r.powerDensity + '"></div></div>';
-      html += '<div class="field-row"><label>系统效率(%)</label><div class="input-wrap"><input type="number" class="rf-in" data-idx="' + i + '" data-f="sysEfficiency" value="' + r.sysEfficiency + '"></div></div>';
-      html += '<div class="field-row"><label>日均日照(h/天)</label><div class="input-wrap"><input type="number" class="rf-in" data-idx="' + i + '" data-f="sunHours" step="any" value="' + r.sunHours + '"></div></div>';
-      html += '<div class="calc-box">①可用面积=' + c.usableArea.toFixed(1) + 'm² ②装机=' + c.capKw.toFixed(2) + 'kW ③峰值小时=' + c.peakHours.toFixed(0) + 'h ④年发电量=' + fmt(c.annualKwh) + 'kWh</div></div>';
+      roofInner+='</div></div>';
+      roofInner+='<div class="field-row"><label>朝向系数</label><input type="number" step="0.01" class="text-input rf" data-i="'+i+'" data-f="orientCoef" value="'+r.orientCoef+'"></div>';
+      roofInner+='<div class="shading-ref">无遮挡0.98～1.00 · 轻微0.92～0.97 · 中等0.85～0.91 · 较严重0.75～0.84 · 严重&lt;0.75</div>';
+      roofInner+='<div class="field-row"><label>遮挡系数</label><input type="number" step="0.01" class="text-input rf" data-i="'+i+'" data-f="shadeCoef" value="'+r.shadeCoef+'"></div>';
+      roofInner+='<div class="field-row"><label>功率密度(Wp/m²)</label><input type="number" step="0.01" class="text-input rf" data-i="'+i+'" data-f="powerDensity" value="'+r.powerDensity+'"><p class="hint-sm">一般85～120 Wp/m²</p></div>';
+      roofInner+='<div class="field-row"><label>日均峰值日照(h/天)</label><input type="number" step="0.01" class="text-input rf" data-i="'+i+'" data-f="sunHours" value="'+r.sunHours+'">';
+      roofInner+='<p class="hint-sm">建议使用 <a href="https://solargis.com/maps-and-gis-data/overview" target="_blank" rel="noopener">Solargis</a> 获取数据</p></div>';
+      roofInner+='<div class="calc-box">①可用面积='+c.ua.toFixed(1)+'m² ②装机='+c.cap.toFixed(2)+'kW ③有效小时='+c.effHours.toFixed(0)+'h<br>④年发电量='+fmt(c.gen)+' kWh</div>';
+      var sum = c.cap>0 ? ('装机 '+c.cap.toFixed(2)+'kW · 年发电 '+fmt(c.gen)+' kWh') : '';
+      html+=collHTML('屋顶 '+(i+1), sum, roofInner);
     }
-    $('roofs-container').innerHTML = html;
+    box.innerHTML=html;
     bindRoofEvents();
-    updateEstimateTotals();
+    bindCollapsibles(box);
+    $('roof-subtotal').textContent='装机 '+fmt(totalCap)+' kW | 年发电量 '+fmt(totalGen)+' kWh';
+    setCollSummary('coll-roof-hdr', totalCap>0 ? ('装机 '+fmt(totalCap)+'kW · 年发电 '+fmt(totalGen)+' kWh') : '');
+    return {cap:totalCap,gen:totalGen};
   }
 
   function bindRoofEvents() {
-    var rf = document.querySelectorAll('.rf-in');
-    for (var i = 0; i < rf.length; i++) {
-      rf[i].addEventListener('input', function () {
-        state.roofs[parseInt(this.getAttribute('data-idx'), 10)][this.getAttribute('data-f')] = this.value;
-        renderRoofs();
-      });
-    }
-    var rt = document.querySelectorAll('.rt-opt');
-    for (var r = 0; r < rt.length; r++) {
-      rt[r].addEventListener('click', function () {
-        var idx = parseInt(this.getAttribute('data-idx'), 10);
-        var type = this.getAttribute('data-type');
-        state.roofs[idx].roofType = type;
-        for (var t = 0; t < ROOF_TYPES.length; t++) if (ROOF_TYPES[t].id === type) state.roofs[idx].areaCoef = ROOF_TYPES[t].defaultCoef;
-        renderRoofs();
-      });
-    }
-    var or = document.querySelectorAll('.or-opt');
-    for (var o = 0; o < or.length; o++) {
-      or[o].addEventListener('click', function () {
-        var idx = parseInt(this.getAttribute('data-idx'), 10);
-        var ori = this.getAttribute('data-ori');
-        state.roofs[idx].orientation = ori;
-        for (var j = 0; j < ORIENTATIONS.length; j++) if (ORIENTATIONS[j].id === ori) state.roofs[idx].orientCoef = ORIENTATIONS[j].defaultCoef;
-        renderRoofs();
-      });
-    }
-    var dels = document.querySelectorAll('.del-roof');
-    for (var d = 0; d < dels.length; d++) {
-      dels[d].addEventListener('click', function () {
-        state.roofs.splice(parseInt(this.getAttribute('data-idx'), 10), 1);
-        renderRoofs();
-      });
-    }
-  }
-
-  function calcGroundGen() {
-    var cap = parseFloat($('ground-cap').value) || 0;
-    var hours = parseFloat($('ground-hours').value) || 0;
-    var eff = (parseFloat($('ground-eff').value) || 0) / 100;
-    return cap * hours * eff;
-  }
-  function calcWindGen() {
-    var cap = parseFloat($('wind-cap').value) || 0;
-    var hours = parseFloat($('wind-hours').value) || 0;
-    var eff = (parseFloat($('wind-eff').value) || 0) / 100;
-    return cap * hours * eff;
-  }
-
-  function updateEstimateTotals() {
-    var totalCap = 0, totalGen = 0;
-    if (hasSolar() && hasRoofSite()) {
-      for (var i = 0; i < state.roofs.length; i++) {
-        var c = calcRoof(state.roofs[i]);
-        totalCap += c.capKw;
-        totalGen += c.annualKwh;
-      }
-    }
-    if (hasSolar() && hasGroundSite()) {
-      var gc = parseFloat($('ground-cap').value) || 0;
-      totalCap += gc;
-      totalGen += calcGroundGen();
-      $('ground-gen').textContent = fmt(calcGroundGen());
-    }
-    if (hasWind()) {
-      var wc = parseFloat($('wind-cap').value) || 0;
-      totalCap += wc;
-      totalGen += calcWindGen();
-      $('wind-gen').textContent = fmt(calcWindGen());
-    }
-    $('total-cap').textContent = fmt(totalCap);
-    $('total-gen').textContent = fmt(totalGen);
-    state.estimateCap = totalCap;
-    state.estimateGen = totalGen;
-  }
-
-  ['ground-cap', 'ground-hours', 'ground-eff', 'wind-cap', 'wind-hours', 'wind-eff'].forEach(function (id) {
-    $(id).addEventListener('input', updateEstimateTotals);
-  });
-
-  $('add-roof').addEventListener('click', function () {
-    if (state.roofs.length >= 5) { alert('最多5栋'); return; }
-    state.roofs.push(createRoof());
-    renderRoofs();
-  });
-
-  /* ===== Step3 calc ===== */
-  function renderUserTable() {
-    var html = '';
-    for (var i = 0; i < state.users.length; i++) {
-      var u = state.users[i];
-      var annual = (parseFloat(u.power) || 0) * (parseFloat(u.hours) || 0);
-      html += '<tr><td><input type="text" class="un-in" data-idx="' + i + '" data-f="name" value="' + (u.name || '') + '"></td>';
-      html += '<td><input type="number" class="un-in" data-idx="' + i + '" data-f="power" value="' + (u.power || '') + '"></td>';
-      html += '<td><input type="number" class="un-in" data-idx="' + i + '" data-f="hours" value="' + (u.hours || '') + '"></td>';
-      html += '<td class="auto-val">' + fmt(annual) + ' kWh</td></tr>';
-    }
-    $('user-body').innerHTML = html;
-    var inputs = $('user-body').querySelectorAll('.un-in');
-    for (var j = 0; j < inputs.length; j++) {
-      inputs[j].addEventListener('input', function () {
-        state.users[parseInt(this.getAttribute('data-idx'), 10)][this.getAttribute('data-f')] = this.value;
-        calcStep3();
-        renderUserTable();
-      });
-    }
-  }
-
-  function calcStep3() {
-    var cap = parseFloat($('capacity').value) || 0;
-    var hours = parseFloat($('hours').value) || 0;
-    var rate = parseFloat($('auxRate').value) || 0;
-    var annualGen = cap * hours * (1 - rate / 100);
-    $('annualGen').textContent = annualGen > 0 ? fmt(annualGen) : '—';
-    var totalLoad = 0;
-    for (var i = 0; i < state.users.length; i++) {
-      totalLoad += (parseFloat(state.users[i].power) || 0) * (parseFloat(state.users[i].hours) || 0);
-    }
-    $('totalLoad').textContent = fmt(totalLoad);
-    var selfUse = annualGen * state.flexCoef;
-    var gridFeed = Math.max(0, annualGen - selfUse);
-    $('selfUse').textContent = annualGen > 0 ? fmt(selfUse) : '—';
-    $('gridFeed').textContent = annualGen > 0 ? fmt(gridFeed) : '—';
-    return { annualGen: annualGen, totalLoad: totalLoad, selfUse: selfUse, gridFeed: gridFeed };
-  }
-
-  ['capacity', 'hours', 'auxRate'].forEach(function (id) {
-    $(id).addEventListener('input', calcStep3);
-  });
-
-  $('add-user').addEventListener('click', function () {
-    if (state.users.length >= 8) { alert('最多8个用户'); return; }
-    state.users.push({ name: '', power: 0, hours: 0 });
-    renderUserTable();
-  });
-
-  var flexOpts = document.querySelectorAll('#flex-options .flex-option');
-  for (var f = 0; f < flexOpts.length; f++) {
-    flexOpts[f].addEventListener('click', function () {
-      for (var j = 0; j < flexOpts.length; j++) flexOpts[j].classList.remove('selected');
-      this.classList.add('selected');
-      state.flexCoef = parseFloat(this.getAttribute('data-coef'));
-      calcStep3();
+    document.querySelectorAll('.rf').forEach(function(el){
+      el.oninput=function(){ state.roofs[parseInt(this.getAttribute('data-i'),10)][this.getAttribute('data-f')]=this.value; updateSiteTotals(); renderRoofs(); };
+    });
+    document.querySelectorAll('.rt-pick').forEach(function(el){
+      el.onclick=function(){ var i=parseInt(this.getAttribute('data-i'),10), t=this.getAttribute('data-t');
+        state.roofs[i].roofType=t; for(var j=0;j<ROOF_TYPES.length;j++) if(ROOF_TYPES[j].id===t) state.roofs[i].areaCoef=ROOF_TYPES[j].coef; renderRoofs(); updateSiteTotals(); };
+    });
+    document.querySelectorAll('.or-pick').forEach(function(el){
+      el.onclick=function(){ var i=parseInt(this.getAttribute('data-i'),10), o=this.getAttribute('data-o');
+        state.roofs[i].orientation=o; for(var j=0;j<ORIENTATIONS.length;j++) if(ORIENTATIONS[j].id===o) state.roofs[i].orientCoef=ORIENTATIONS[j].coef; renderRoofs(); updateSiteTotals(); };
+    });
+    document.querySelectorAll('.del-roof').forEach(function(el){
+      el.onclick=function(e){ e.stopPropagation(); state.roofs.splice(parseInt(this.getAttribute('data-i'),10),1); renderRoofs(); updateSiteTotals(); };
     });
   }
 
+  function renderGroundSections() {
+    var container=$('ground-sections'), sites=siteTypes(), html='';
+    for(var g=0;g<GROUND_TYPES.length;g++) {
+      var gt=GROUND_TYPES[g];
+      if(sites.indexOf(gt)===-1) continue;
+      if(!state.groundAreas[gt]) state.groundAreas[gt]=[];
+      var gc=0, gg=0, arr=state.groundAreas[gt];
+      for(var xi=0;xi<arr.length;xi++) { gc+=num(arr[xi].cap); gg+=num(arr[xi].cap)*num(arr[xi].hours); }
+      var gsum = gc>0 ? ('装机 '+fmt(gc)+'kW · 年发电 '+fmt(gg)+' kWh') : '';
+      html+='<div class="collapsible-wrap section-block" id="ground-wrap-'+g+'">';
+      html+='<div class="collapsible-header"><span class="header-title">'+gt+'光伏估算</span><span class="header-right"><span class="header-summary">'+gsum+'</span><span class="arrow">▼</span></span></div>';
+      html+='<div class="collapsible-content"><div class="collapsible-inner"><div id="ground-'+g+'"></div>';
+      html+='<button type="button" class="btn-add add-ground" data-type="'+gt+'" data-g="'+g+'">+ 添加区域</button></div></div></div>';
+    }
+    container.innerHTML=html;
+    for(g=0;g<GROUND_TYPES.length;g++) {
+      gt=GROUND_TYPES[g]; if(sites.indexOf(gt)===-1) continue;
+      renderGroundList(gt, g);
+    }
+    document.querySelectorAll('.add-ground').forEach(function(btn){
+      btn.onclick=function(e){ e.stopPropagation(); var type=this.getAttribute('data-type');
+        if(!state.groundAreas[type]) state.groundAreas[type]=[];
+        state.groundAreas[type].push(createGroundArea(type));
+        renderGroundSections(); updateSiteTotals(); };
+    });
+    bindCollapsibles(container);
+  }
+
+  function renderGroundList(type, gIdx) {
+    var list=state.groundAreas[type]||[], box=$('ground-'+gIdx), html='';
+    for(var i=0;i<list.length;i++) {
+      var a=list[i], gen=num(a.cap)*num(a.hours);
+      var inner='';
+      if(list.length>1) inner+='<div style="text-align:right;margin-bottom:8px;"><button type="button" class="btn-sm del-ground" data-type="'+type+'" data-i="'+i+'">删除</button></div>';
+      inner+='<div class="field-row"><label>基本情况</label><input type="text" class="text-input ga" data-type="'+type+'" data-i="'+i+'" data-f="desc" value="'+(a.desc||'')+'"></div>';
+      inner+='<div class="field-row"><label>可用面积(m²)</label><input type="number" step="0.01" class="text-input ga" data-type="'+type+'" data-i="'+i+'" data-f="area" value="'+(a.area||'')+'"></div>';
+      inner+='<div class="field-row"><label>装机容量(kW)</label><input type="number" step="0.01" class="text-input ga" data-type="'+type+'" data-i="'+i+'" data-f="cap" value="'+(a.cap||'')+'"></div>';
+      inner+='<div class="field-row"><label>年有效发电小时(h)</label><input type="number" step="0.01" class="text-input ga" data-type="'+type+'" data-i="'+i+'" data-f="hours" value="'+(a.hours||'')+'"></div>';
+      inner+='<div class="calc-box">年发电量：'+fmt(gen)+' kWh</div>';
+      var sum = num(a.cap)>0 ? ('装机 '+num(a.cap)+'kW · 年发电 '+fmt(gen)+' kWh') : '';
+      html+=collHTML(type+' · 区域 '+(i+1), sum, inner);
+    }
+    box.innerHTML=html;
+    document.querySelectorAll('.ga').forEach(function(el){
+      el.oninput=function(){ var type=this.getAttribute('data-type'), i=parseInt(this.getAttribute('data-i'),10);
+        state.groundAreas[type][i][this.getAttribute('data-f')]=this.value; updateSiteTotals(); renderGroundSections(); };
+    });
+    document.querySelectorAll('.del-ground').forEach(function(el){
+      el.onclick=function(e){ e.stopPropagation(); state.groundAreas[this.getAttribute('data-type')].splice(parseInt(this.getAttribute('data-i'),10),1); renderGroundSections(); updateSiteTotals(); };
+    });
+    bindCollapsibles(box);
+  }
+
+  function updateSiteTypeSummary() {
+    var sites=siteTypes();
+    setCollSummary('coll-site-hdr', sites.length ? sites.join('、') : '');
+  }
+
+  function updateSiteSections() {
+    var sites=siteTypes();
+    updateSiteTypeSummary();
+    if(sites.indexOf('屋顶')!==-1) { show($('sec-roof')); if(!state.roofs.length) state.roofs=[createRoof()]; renderRoofs(); }
+    else hide($('sec-roof'));
+    if(sites.some(function(s){ return GROUND_TYPES.indexOf(s)!==-1; })) { show($('sec-ground')); renderGroundSections(); }
+    else hide($('sec-ground'));
+    if(hasWind()) show($('sec-wind')); else hide($('sec-wind'));
+    if(hasBiomass()) show($('sec-biomass')); else hide($('sec-biomass'));
+    if(sites.indexOf('其他')!==-1) show($('sec-other')); else hide($('sec-other'));
+    if(sites.indexOf('其他')!==-1) show($('st-other-row')); else hide($('st-other-row'));
+    updateRefHints(); updateSiteTotals();
+  }
+
+  document.querySelectorAll('.site-type').forEach(function(el){ el.addEventListener('change', updateSiteSections); });
+  $('st-other').addEventListener('change', function(){ if(this.checked) show($('st-other-row')); else hide($('st-other-row')); updateSiteSections(); });
+
+  ['wind-cap','wind-hours','wind-eff','wind-desc','bio-cap','bio-hours','bio-aux','bio-desc','other-cap','other-gen','other-desc','other-type'].forEach(function(id){
+    if($(id)) $(id).addEventListener('input', function(){ updateSiteTotals(); if(id.indexOf('wind')===0){ var wg=calcWindGen(); if($('wind-gen')) $('wind-gen').textContent=fmt(wg); setCollSummary('coll-wind-hdr', num($('wind-cap').value)>0?'装机 '+fmt(num($('wind-cap').value))+'kW · 年发电 '+fmt(wg)+' kWh':''); } if(id.indexOf('bio')===0){ var bg=calcBioGen(); if($('bio-gen')) $('bio-gen').textContent=fmt(bg); setCollSummary('coll-bio-hdr', num($('bio-cap').value)>0?'装机 '+fmt(num($('bio-cap').value))+'kW · 年发电 '+fmt(bg)+' kWh':''); } if(id.indexOf('other')===0){ setCollSummary('coll-other-hdr', num($('other-cap').value)>0?'装机 '+fmt(num($('other-cap').value))+'kW · 年发电 '+fmt(num($('other-gen').value))+' kWh':''); } });
+  });
+
+  function calcWindGen() {
+    return num($('wind-cap').value)*num($('wind-hours').value)*num($('wind-eff').value)/100;
+  }
+
+  function calcGenTotals() {
+    var cap=0, gen=0, byType={};
+    if(siteTypes().indexOf('屋顶')!==-1) {
+      for(var i=0;i<state.roofs.length;i++) { var c=calcRoof(state.roofs[i]); cap+=c.cap; gen+=c.gen; }
+      byType['光伏(屋顶)']={cap:0,gen:0};
+      for(i=0;i<state.roofs.length;i++) { c=calcRoof(state.roofs[i]); byType['光伏(屋顶)'].cap+=c.cap; byType['光伏(屋顶)'].gen+=c.gen; }
+    }
+    for(var g=0;g<GROUND_TYPES.length;g++) {
+      var gt=GROUND_TYPES[g], arr=state.groundAreas[gt]||[];
+      if(!arr.length) continue;
+      var gc=0, gg=0;
+      for(i=0;i<arr.length;i++) { gc+=num(arr[i].cap); gg+=num(arr[i].cap)*num(arr[i].hours); }
+      cap+=gc; gen+=gg; byType['光伏('+gt+')']={cap:gc,gen:gg};
+    }
+    if(hasWind()) {
+      var wc=num($('wind-cap').value), wg=wc*num($('wind-hours').value)*num($('wind-eff').value)/100;
+      cap+=wc; gen+=wg; byType['风电']={cap:wc,gen:wg};
+    }
+    if(hasBiomass()) {
+      var bc=num($('bio-cap').value), bg=bc*num($('bio-hours').value)*(1-num($('bio-aux').value)/100);
+      cap+=bc; gen+=bg; byType['生物质']={cap:bc,gen:bg};
+    }
+    if(siteTypes().indexOf('其他')!==-1) {
+      var oc=num($('other-cap').value), og=num($('other-gen').value);
+      cap+=oc; gen+=og; byType['其他']={cap:oc,gen:og};
+    }
+    return {cap:cap, gen:gen, byType:byType};
+  }
+
+  function updateSiteTotals() {
+    var t=calcGenTotals();
+    $('site-total-cap').textContent=fmt(t.cap);
+    $('site-total-gen').textContent=fmt(t.gen);
+    state.genTotals=t;
+    setCollSummary('coll-roof-hdr', t.byType['光伏(屋顶)'] ? ('装机 '+fmt(t.byType['光伏(屋顶)'].cap)+'kW · 年发电 '+fmt(t.byType['光伏(屋顶)'].gen)+' kWh') : '');
+    if(hasWind()) { var wc=num($('wind-cap').value), wg=calcWindGen(); setCollSummary('coll-wind-hdr', wc>0?'装机 '+fmt(wc)+'kW · 年发电 '+fmt(wg)+' kWh':''); if($('wind-gen')) $('wind-gen').textContent=fmt(wg); }
+    if(hasBiomass()) { var bc=num($('bio-cap').value), bg=calcBioGen(); setCollSummary('coll-bio-hdr', bc>0?'装机 '+fmt(bc)+'kW · 年发电 '+fmt(bg)+' kWh':''); if($('bio-gen')) $('bio-gen').textContent=fmt(bg); }
+    if(siteTypes().indexOf('其他')!==-1) { var oc=num($('other-cap').value), og=num($('other-gen').value); setCollSummary('coll-other-hdr', oc>0?'装机 '+fmt(oc)+'kW · 年发电 '+fmt(og)+' kWh':''); }
+    return t;
+  }
+
+  $('add-roof').onclick=function(){ if(state.roofs.length>=5){alert('最多5栋');return;} state.roofs.push(createRoof()); renderRoofs(); updateSiteTotals(); };
+
+  /* ===== Users ===== */
+  function renderUsers() {
+    if(!state.users.length) state.users=[createUser()];
+    var box=$('users-container'), html='';
+    for(var i=0;i<state.users.length;i++) {
+      var u=state.users[i], daily=0;
+      for(var s=0;s<12;s++) daily+=num(u.slots[s])*2;
+      var annualFromSlots=daily*num(u.opDays);
+      var annual = num(u.annualKwh) || annualFromSlots;
+      var inner='';
+      if(state.users.length>1) inner+='<div style="text-align:right;margin-bottom:8px;"><button type="button" class="btn-sm del-user" data-i="'+i+'">删除用户</button></div>';
+      inner+='<div class="field-row"><label>用户名称</label><input type="text" class="text-input u-f" data-i="'+i+'" data-f="name" value="'+(u.name||'')+'"></div>';
+      inner+='<div class="field-row"><label>用电负荷(kW)</label><input type="number" step="0.01" class="text-input u-f" data-i="'+i+'" data-f="load" value="'+(u.load||'')+'"></div>';
+      inner+='<div class="field-row"><label>年均用电量(kWh)</label><input type="number" step="0.01" class="text-input u-f" data-i="'+i+'" data-f="annualKwh" value="'+(u.annualKwh||'')+'"></div>';
+      inner+='<div class="field-row"><label>月均用电量(kWh)</label><input type="number" step="0.01" class="text-input u-f" data-i="'+i+'" data-f="monthlyKwh" value="'+(u.monthlyKwh|| (u.annualKwh?num(u.annualKwh)/12:''))+'"></div>';
+      inner+='<div class="field-row"><label>电费缴费单</label><div class="flex-options bill-opt" data-i="'+i+'">';
+      ['已提供','未提供','暂不适用'].forEach(function(b){
+        inner+='<div class="flex-option'+(u.bill===b?' selected':'')+'" data-b="'+b+'">'+b+'</div>';
+      });
+      inner+='</div></div>';
+      inner+='<p class="section-title" style="margin-top:10px;">用电时段分布(每段2h)</p>';
+      for(s=0;s<12;s++) {
+        var skwh=num(u.slots[s])*2;
+        inner+='<div class="slot-row"><span class="slot-label">'+SLOT_LABELS[s]+'</span><input type="number" step="0.01" class="text-input slot-in" data-i="'+i+'" data-s="'+s+'" value="'+(u.slots[s]||'')+'"><span class="slot-unit">kW → '+skwh.toFixed(2)+' kWh</span></div>';
+      }
+      inner+='<div class="calc-box">日用电量：'+daily.toFixed(2)+' kWh · 年运行天数：<input type="number" step="0.01" class="text-input u-f inline-days" data-i="'+i+'" data-f="opDays" value="'+u.opDays+'" style="width:80px;display:inline-block"> · 年用电量(时段)：'+annualFromSlots.toFixed(0)+' kWh</div>';
+      inner+='<div class="field-row"><label>是否为居民用户</label><select class="select-input u-f" data-i="'+i+'" data-f="isResident"><option'+(u.isResident==='是'?' selected':'')+'>是</option><option'+(u.isResident==='否'?' selected':'')+'>否</option></select></div>';
+      inner+='<div class="field-row"><label>是否为农业用户</label><select class="select-input u-f" data-i="'+i+'" data-f="isAgri"><option'+(u.isAgri==='是'?' selected':'')+'>是</option><option'+(u.isAgri==='否'?' selected':'')+'>否</option></select></div>';
+      inner+='<div class="field-row"><label>独立法人资格</label><select class="select-input u-f" data-i="'+i+'" data-f="hasLegal"><option'+(u.hasLegal==='是'?' selected':'')+'>是</option><option'+(u.hasLegal==='否'?' selected':'')+'>否</option><option'+(u.hasLegal==='待确认'?' selected':'')+'>待确认</option></select></div>';
+      inner+='<div class="field-row"><label>产业政策</label><select class="select-input u-f" data-i="'+i+'" data-f="policy"><option'+(u.policy==='符合'?' selected':'')+'>符合</option><option'+(u.policy==='不符合'?' selected':'')+'>不符合</option><option'+(u.policy==='待核查'?' selected':'')+'>待核查</option></select></div>';
+      inner+='<div class="field-row"><label>绿电消费需求</label><select class="select-input u-f" data-i="'+i+'" data-f="greenType">';
+      for(var g=0;g<GREEN_DEMAND.length;g++) inner+='<option'+(u.greenType===GREEN_DEMAND[g]?' selected':'')+'>'+GREEN_DEMAND[g]+'</option>';
+      inner+='</select></div>';
+      var uname = u.name || ('用户'+(i+1));
+      var usum = uname+' · '+num(u.load)+'kW · '+fmt(annual)+'kWh/年';
+      html+=collHTML(uname, usum, inner);
+    }
+    box.innerHTML=html;
+    bindUserEvents();
+    bindCollapsibles(box);
+    updateUserSummary();
+  }
+
+  function bindUserEvents() {
+    document.querySelectorAll('.u-f').forEach(function(el){
+      el.oninput=el.onchange=function(){
+        var i=parseInt(this.getAttribute('data-i'),10), f=this.getAttribute('data-f');
+        state.users[i][f]=this.value;
+        if(f==='annualKwh'&&!state.users[i].monthlyManual) state.users[i].monthlyKwh=num(this.value)/12;
+        renderUsers();
+      };
+    });
+    document.querySelectorAll('.slot-in').forEach(function(el){
+      el.oninput=function(){ state.users[parseInt(this.getAttribute('data-i'),10)].slots[parseInt(this.getAttribute('data-s'),10)]=this.value; renderUsers(); };
+    });
+    document.querySelectorAll('.bill-opt .flex-option').forEach(function(el){
+      el.onclick=function(){ var p=this.parentElement, i=parseInt(p.getAttribute('data-i'),10);
+        p.querySelectorAll('.flex-option').forEach(function(o){o.classList.remove('selected');});
+        this.classList.add('selected'); state.users[i].bill=this.getAttribute('data-b'); };
+    });
+    document.querySelectorAll('.del-user').forEach(function(el){
+      el.onclick=function(e){ e.stopPropagation(); if(state.users.length<=1){alert('至少保留1个用户');return;} state.users.splice(parseInt(this.getAttribute('data-i'),10),1); renderUsers(); };
+    });
+  }
+
+  function updateUserSummary() {
+    var totalLoad=0, totalAnnual=0;
+    for(var i=0;i<state.users.length;i++) {
+      totalLoad+=num(state.users[i].load);
+      totalAnnual+=num(state.users[i].annualKwh) || (function(u){ var d=0; for(var s=0;s<12;s++) d+=num(u.slots[s])*2; return d*num(u.opDays); })(state.users[i]);
+    }
+    $('user-count').textContent=state.users.length;
+    $('user-total-load').textContent=fmt(totalLoad);
+    $('user-total-annual').textContent=fmt(totalAnnual);
+    state.userSummary={count:state.users.length, totalLoad:totalLoad, totalAnnual:totalAnnual};
+    setCollSummary('coll-users-hdr', state.users.length+'个用户 · '+fmt(totalLoad)+'kW · '+fmt(totalAnnual)+'kWh/年');
+  }
+
+  $('add-user').onclick=function(){ if(state.users.length>=8){alert('最多8个用户');return;} state.users.push(createUser()); renderUsers(); };
+
+  /* ===== Survey ===== */
+  var POWER_SURVEY = [
+    {id:'sv_power',label:'现有配电设施情况',type:'text'},
+    {id:'sv_voltage',label:'并网点电压等级',type:'number',unit:'kV'},
+    {id:'sv_grid',label:'周边电网接入条件',type:'text'},
+    {id:'sv_meter',label:'计量装置现状',type:'text'}
+  ];
+  var COMPLY_SURVEY = [
+    {id:'sv_usertype',label:'用户类型确认（非居民/非农业）'},
+    {id:'sv_policy',label:'产业政策合规性核查'},
+    {id:'sv_entity',label:'主责单位法人资格确认'},
+    {id:'sv_province',label:'省级能源主管部门沟通情况'}
+  ];
+
+  function renderPowerSurvey() {
+    var html='';
+    for(var i=0;i<POWER_SURVEY.length;i++) {
+      var it=POWER_SURVEY[i];
+      html+='<div class="survey-item"><div class="survey-item-head"><input type="checkbox" class="sv-check" id="'+it.id+'"><label for="'+it.id+'">'+it.label+'</label></div>';
+      html+='<div class="survey-item-extra"><input type="'+(it.type==='number'?'number':'text')+'" step="0.01" class="text-input" id="'+it.id+'-val"></div></div>';
+    }
+    $('power-survey').innerHTML=html;
+    document.querySelectorAll('.sv-check').forEach(function(el){ el.addEventListener('change', updateSurveyProgress); });
+  }
+
+  function renderComplySurvey() {
+    var html='';
+    for(var i=0;i<COMPLY_SURVEY.length;i++) {
+      html+='<div class="survey-item"><div class="survey-item-head"><input type="checkbox" class="sv-check2" id="'+COMPLY_SURVEY[i].id+'"><label for="'+COMPLY_SURVEY[i].id+'">'+COMPLY_SURVEY[i].label+'</label></div></div>';
+    }
+    $('comply-survey').innerHTML=html;
+    document.querySelectorAll('.sv-check2').forEach(function(el){ el.addEventListener('change', updateSurveyProgress); });
+  }
+
+  function getSurveyTotal() {
+    return document.querySelectorAll('.sv-check,.sv-check2').length + state.customSurveys.length;
+  }
+  function getSurveyDone() {
+    var d=0;
+    document.querySelectorAll('.sv-check:checked,.sv-check2:checked,#custom-list .sv-check:checked').forEach(function(){d++;});
+    return d;
+  }
+  function updateSurveyProgress() {
+    var t=getSurveyTotal(), d=getSurveyDone();
+    $('progress-text').textContent='已完成 '+d+' / '+t+' 项';
+    $('progress-fill').style.width=(t>0?d/t*100:0)+'%';
+    updatePowerSurveySummary(); updateComplySurveySummary(); updateCustomSurveySummary();
+  }
+
+  $('add-survey').onclick=function(){ if(state.customSurveys.length>=10){alert('最多10项');return;} show($('add-form')); };
+  $('save-custom').onclick=function(){
+    var t=$('custom-input').value.trim(); if(!t) return;
+    state.customSurveys.push({id:'c'+Date.now(),label:t,checked:false});
+    $('custom-input').value=''; hide($('add-form')); renderCustomSurveys();
+  };
+
+  function renderCustomSurveys() {
+    var html='';
+    for(var i=0;i<state.customSurveys.length;i++) {
+      var c=state.customSurveys[i];
+      html+='<div class="survey-item"><div class="survey-item-head"><input type="checkbox" class="sv-check" id="c-'+c.id+'"><label for="c-'+c.id+'">'+c.label+'</label></div></div>';
+    }
+    $('custom-list').innerHTML=html;
+    document.querySelectorAll('#custom-list .sv-check').forEach(function(el){ el.addEventListener('change', updateSurveyProgress); });
+    updateSurveyProgress();
+  }
+
+  /* ===== Rights ===== */
+  document.querySelectorAll('.cert-opt').forEach(function(el){
+    el.onclick=function(){
+      document.querySelectorAll('.cert-opt').forEach(function(o){o.classList.remove('selected');});
+      this.classList.add('selected'); state.rights.certType=this.getAttribute('data-v');
+      hide($('cert-has')); hide($('cert-warn')); hide($('cert-other'));
+      if(state.rights.certType==='有') show($('cert-has'));
+      else if(state.rights.certType==='无') show($('cert-warn'));
+      else if(state.rights.certType==='其他') show($('cert-other'));
+      updateRightsSummary();
+    };
+  });
+  if($('rights-owner')) $('rights-owner').addEventListener('input', function(){ state.rights.owner=this.value; updateRightsSummary(); });
+  if($('rights-relation')) $('rights-relation').addEventListener('input', function(){ state.rights.relation=this.value; updateRightsSummary(); });
+
+  /* ===== Step3 ===== */
+  function getSlotGenWeights() {
+    var totals=calcGenTotals(), w=new Array(12), i, solarCap=0, windCap=0, bioCap=0, totalCap=totals.cap||1;
+    if(siteTypes().indexOf('屋顶')!==-1) for(i=0;i<state.roofs.length;i++) solarCap+=calcRoof(state.roofs[i]).cap;
+    for(i=0;i<GROUND_TYPES.length;i++) { var arr=state.groundAreas[GROUND_TYPES[i]]||[]; for(var j=0;j<arr.length;j++) solarCap+=num(arr[j].cap); }
+    if(hasWind()) windCap=num($('wind-cap').value);
+    if(hasBiomass()) bioCap=num($('bio-cap').value);
+    var uniform=1/12;
+    for(i=0;i<12;i++) {
+      w[i]=0;
+      if(solarCap>0) w[i]+=(solarCap/totalCap)*PV_WEIGHTS[i];
+      if(windCap>0) w[i]+=(windCap/totalCap)*uniform;
+      if(bioCap>0) w[i]+=(bioCap/totalCap)*uniform;
+    }
+    var sum=0; for(i=0;i<12;i++) sum+=w[i];
+    if(sum<=0) for(i=0;i<12;i++) w[i]=uniform; else for(i=0;i<12;i++) w[i]/=sum;
+    return w;
+  }
+
+  function aggregateSlots() {
+    var loadSlots=new Array(12), i, s;
+    for(i=0;i<12;i++) loadSlots[i]=0;
+    for(i=0;i<state.users.length;i++) for(s=0;s<12;s++) loadSlots[s]+=num(state.users[i].slots[s])*2;
+    return loadSlots;
+  }
+
+  function renderStep3() {
+    var totals=calcGenTotals();
+    var html='';
+    for(var k in totals.byType) html+='<div class="readonly-row"><span>'+k+'</span><span>'+fmt(totals.byType[k].cap)+' kW / '+fmt(totals.byType[k].gen)+' kWh</span></div>';
+    $('s3-gen-detail').innerHTML=html;
+    $('s3-total-cap').textContent=fmt(totals.cap);
+    $('s3-total-gen').textContent=fmt(totals.gen);
+
+    var weights=getSlotGenWeights(), loadSlots=aggregateSlots(), dailyGen=totals.gen/365, genSlots=[], i;
+    var tableHtml='<tr><th>时段</th><th>发电(kWh)</th><th>用电(kWh)</th></tr>';
+    var dayGen=0, dayLoad=0;
+    for(i=0;i<12;i++) {
+      genSlots[i]=dailyGen*weights[i];
+      dayGen+=genSlots[i]; dayLoad+=loadSlots[i];
+      tableHtml+='<tr><td>'+SLOT_LABELS[i]+'</td><td>'+genSlots[i].toFixed(2)+'</td><td>'+loadSlots[i].toFixed(2)+'</td></tr>';
+    }
+    $('slot-table').innerHTML=tableHtml;
+    var surplus=dayGen-dayLoad;
+    $('s3-day-gen').textContent=dayGen.toFixed(0);
+    $('s3-day-load').textContent=dayLoad.toFixed(0);
+    $('s3-surplus').textContent=(surplus>=0?surplus:-surplus).toFixed(0);
+    $('s3-surplus-label').textContent=surplus>=0?'余电(可上网)':'缺口(需购电)';
+    var prelim=totals.gen>0?(Math.min(dayLoad,dayGen)/dayGen*100):0;
+    $('s3-prelim-rate').textContent=prelim.toFixed(1)+'%';
+
+    var selfUse=totals.gen*state.flexCoef, gridFeed=Math.max(0,totals.gen-selfUse);
+    $('s3-self').textContent=fmt(selfUse);
+    $('s3-feed').textContent=fmt(gridFeed);
+
+    renderChart('compare-chart', genSlots, loadSlots);
+    var us=state.userSummary||{totalAnnual:0};
+    var comp=calculate({totalGen:totals.gen,selfUse:selfUse,totalLoad:us.totalAnnual||selfUse/state.flexCoef,gridFeed:gridFeed,year:state.calcYear});
+    state.step3={totals:totals,genSlots:genSlots,loadSlots:loadSlots,selfUse:selfUse,gridFeed:gridFeed,preCompliance:comp};
+    renderStoragePreview(comp, totals.gen, selfUse);
+  }
+
+  function renderChart(canvasId, genSlots, loadSlots) {
+    var canvas=$(canvasId); if(!canvas||typeof Chart==='undefined') return;
+    if(canvasId==='compare-chart'&&state.chart){ state.chart.destroy(); state.chart=null; }
+    if(canvasId==='report-chart'&&state.reportChart){ state.reportChart.destroy(); state.reportChart=null; }
+    var inst=new Chart(canvas.getContext('2d'),{
+      type:'bar',
+      data:{
+        labels:SLOT_LABELS,
+        datasets:[
+          {label:'估算发电量(kWh)',data:genSlots,backgroundColor:'rgba(74,158,187,0.7)'},
+          {label:'用电量(kWh)',data:loadSlots,backgroundColor:'rgba(201,168,76,0.7)'}
+        ]
+      },
+      options:{responsive:true,plugins:{legend:{labels:{color:'#8fa8c0'}}},scales:{x:{ticks:{color:'#8fa8c0'}},y:{ticks:{color:'#8fa8c0'}}}}
+    });
+    if(canvasId==='compare-chart') state.chart=inst; else state.reportChart=inst;
+  }
+
+  document.querySelectorAll('#flex-options .flex-option').forEach(function(el){
+    el.onclick=function(){
+      document.querySelectorAll('#flex-options .flex-option').forEach(function(o){o.classList.remove('selected');});
+      this.classList.add('selected'); state.flexCoef=parseFloat(this.getAttribute('data-coef'));
+      if(state.current==='s3') renderStep3();
+    };
+  });
+
+  ['storage-power','storage-cap','storage-cycles'].forEach(function(id){
+    $(id).addEventListener('input', function(){ if(state.step3) renderStoragePreview(state.step3.preCompliance, state.step3.totals.gen, state.step3.selfUse); updateStorageSummary(); });
+  });
+
+  function renderStoragePreview(comp, totalGen, selfUse) {
+    var html='<div class="preview-row">指标一 '+pct(comp.r1)+' '+(comp.p1?'✅':'❌')+' · 指标二 '+pct(comp.r2)+' '+(comp.p2?'✅':'❌')+' · 指标三 '+pct(comp.r3)+' '+(comp.p3?'✅':'❌')+'</div>';
+    $('storage-preview').innerHTML=html;
+    var cycles=num($('storage-cycles').value)||300, cap=num($('storage-cap').value);
+    var addSelf=cap*cycles, newSelf=selfUse+addSelf, newFeed=Math.max(0,totalGen-newSelf);
+    var us=state.userSummary||{totalAnnual:totalGen};
+    var after=calculate({totalGen:totalGen,selfUse:newSelf,totalLoad:us.totalAnnual,gridFeed:newFeed,year:state.calcYear});
+    var tbl='<table class="compare-table"><tr><th></th><th>配储前</th><th>配储后</th></tr>';
+    tbl+='<tr><td>指标一</td><td>'+pct(comp.r1)+(comp.p1?'✅':'❌')+'</td><td>'+pct(after.r1)+(after.p1?'✅':'❌')+'</td></tr>';
+    tbl+='<tr><td>指标二</td><td>'+pct(comp.r2)+(comp.p2?'✅':'❌')+'</td><td>'+pct(after.r2)+(after.p2?'✅':'❌')+'</td></tr>';
+    tbl+='<tr><td>指标三</td><td>'+pct(comp.r3)+(comp.p3?'✅':'❌')+'</td><td>'+pct(after.r3)+(after.p3?'✅':'❌')+'</td></tr></table>';
+    $('storage-compare').innerHTML=tbl;
+    if(!after.p1 && cycles>0) {
+      var needCap=(0.6*totalGen-selfUse)/cycles;
+      $('storage-hint').textContent='需配置储能容量至少 '+fmt(Math.max(0,needCap))+' kWh 方可达到60%要求';
+    } else $('storage-hint').textContent='';
+    state.step3.afterStorage=after;
+    state.step3.storageAdd=addSelf;
+    state.step3.finalSelfUse=newSelf;
+    state.step3.finalGridFeed=newFeed;
+    updateStorageSummary();
+  }
+
   /* ===== Compliance ===== */
-  function calculate(inputs) {
-    var r1 = inputs.selfUse / inputs.totalGen;
-    var r2 = inputs.selfUse / inputs.totalLoad;
-    var r2threshold = inputs.year === 'before2030' ? 0.35 : 0.30;
-    var r3 = inputs.gridFeed / inputs.totalGen;
-    var p1 = r1 >= 0.60, p2 = r2 >= r2threshold, p3 = r3 <= 0.20;
-    var need1 = p1 ? 0 : parseFloat(((0.60 - r1) * inputs.totalGen).toFixed(2));
-    var need2 = p2 ? 0 : parseFloat(((r2threshold - r2) * inputs.totalLoad).toFixed(2));
+  function calculate(inp) {
+    var r1=inp.selfUse/inp.totalGen, r2=inp.selfUse/inp.totalLoad;
+    var th=inp.year==='before2030'?0.35:0.30, r3=inp.gridFeed/inp.totalGen;
+    var p1=r1>=0.6, p2=r2>=th, p3=r3<=0.2;
     return {
-      r1: r1, r2: r2, r3: r3, p1: p1, p2: p2, p3: p3, r2threshold: r2threshold,
-      needSelfUse: Math.max(need1, need2),
-      needReduce: p3 ? 0 : parseFloat(((r3 - 0.20) * inputs.totalGen).toFixed(2)),
-      allPass: p1 && p2 && p3,
-      failCount: [p1, p2, p3].filter(function (x) { return !x; }).length
+      r1:r1,r2:r2,r3:r3,p1:p1,p2:p2,p3:p3,r2threshold:th,
+      needSelfUse:Math.max(p1?0:(0.6-r1)*inp.totalGen, p2?0:(th-r2)*inp.totalLoad),
+      needReduce:p3?0:(r3-0.2)*inp.totalGen,
+      allPass:p1&&p2&&p3, failCount:[p1,p2,p3].filter(function(x){return!x;}).length
     };
   }
 
   function renderCompliance(data) {
-    $('s4-gen').textContent = fmt(data.annualGen);
-    $('s4-self').textContent = fmt(data.selfUse);
-    $('s4-load').textContent = fmt(data.totalLoad);
-    $('s4-feed').textContent = fmt(data.gridFeed);
-    var result = calculate({ totalGen: data.annualGen, selfUse: data.selfUse, totalLoad: data.totalLoad, gridFeed: data.gridFeed, year: state.calcYear });
-    state.complianceResult = result;
-    state.step3Data = data;
-    var r2Label = state.calcYear === 'before2030' ? '≥35%（2030年前）' : '≥30%（2030年后）';
-    var metrics = [
-      { name: '自发自用/总可用发电量', value: result.r1, threshold: '≥60%', pass: result.p1, gap: pct(0.60 - result.r1), fix: '需增加自发自用约 ' + fmt(result.needSelfUse) + ' kWh' },
-      { name: '自发自用/总用电量', value: result.r2, threshold: r2Label, pass: result.p2, gap: pct(result.r2threshold - result.r2), fix: '需增加自发自用约 ' + fmt(result.needSelfUse) + ' kWh' },
-      { name: '上网电量/总可用发电量', value: result.r3, threshold: '≤20%', pass: result.p3, gap: pct(result.r3 - 0.20), fix: '需减少上网电量约 ' + fmt(result.needReduce) + ' kWh' }
+    var useSelf=data.finalSelfUse||data.selfUse, useFeed=data.finalGridFeed||data.gridFeed;
+    var comp=calculate({totalGen:data.totals.gen,selfUse:useSelf,totalLoad:state.userSummary.totalAnnual,gridFeed:useFeed,year:state.calcYear});
+    state.compliance=comp; state.step3Data=data;
+    var r2l=state.calcYear==='before2030'?'≥35%':'≥30%';
+    var metrics=[
+      {n:'指标一：自发自用/总发电量',v:comp.r1,t:'≥60%',p:comp.p1},
+      {n:'指标二：自发自用/总用电量',v:comp.r2,t:r2l,p:comp.p2},
+      {n:'指标三：上网电量/总发电量',v:comp.r3,t:'≤20%',p:comp.p3}
     ];
-    var html = '';
-    for (var m = 0; m < metrics.length; m++) {
-      var met = metrics[m];
-      html += '<div class="metric-card ' + (met.pass ? 'pass' : 'fail') + '" style="margin:0 0 10px;"><div class="metric-name">' + met.name + '</div>';
-      html += '<div class="metric-row"><span>计算值：' + pct(met.value) + '</span><span>门槛：' + met.threshold + '</span></div>';
-      html += '<div class="metric-conclusion">' + (met.pass ? '✅ 达标' : '❌ 未达标，差 ' + met.gap) + '</div>';
-      if (!met.pass) html += '<div class="metric-fix">整改：' + met.fix + '</div>';
-      html += '</div>';
+    var html='';
+    for(var i=0;i<metrics.length;i++) {
+      var m=metrics[i];
+      html+='<div class="metric-card '+(m.p?'pass':'fail')+'"><div class="metric-name">'+m.n+'</div>';
+      html+='<div class="metric-row"><span>'+pct(m.v)+'</span><span>'+m.t+'</span><span>'+(m.p?'✅达标':'❌未达标')+'</span></div></div>';
     }
-    $('metrics-container').innerHTML = html;
-    var hdr = $('compliance-header'), icon = $('compliance-icon'), title = $('compliance-title');
-    if (result.allPass) { hdr.className = 'result-header pass'; icon.textContent = '✅'; title.textContent = '三项指标均符合政策规划要求'; }
-    else if (result.failCount === 3) { hdr.className = 'result-header deny'; icon.textContent = '❌'; title.textContent = '三项指标均未达标'; }
-    else { hdr.className = 'result-header warn'; icon.textContent = '⚠️'; title.textContent = result.failCount + '项指标未达标，请参考整改建议'; }
+    $('metrics-container').innerHTML=html;
+    var h=$('compliance-header');
+    if(comp.allPass){h.className='result-header pass';$('compliance-title').textContent='三项指标均符合政策规划要求';}
+    else if(comp.failCount===3){h.className='result-header deny';$('compliance-title').textContent='三项指标均未达标';}
+    else{h.className='result-header warn';$('compliance-title').textContent=comp.failCount+'项指标未达标';}
+    return comp;
   }
 
-  var yearOpts = document.querySelectorAll('#year-options .year-option');
-  for (var y = 0; y < yearOpts.length; y++) {
-    yearOpts[y].addEventListener('click', function () {
-      for (var yo = 0; yo < yearOpts.length; yo++) yearOpts[yo].classList.remove('selected');
-      this.classList.add('selected');
-      state.calcYear = this.getAttribute('data-year');
-      if (state.step3Data) renderCompliance(state.step3Data);
-    });
-  }
+  document.querySelectorAll('#year-options .year-option').forEach(function(el){
+    el.onclick=function(){
+      document.querySelectorAll('#year-options .year-option').forEach(function(o){o.classList.remove('selected');});
+      this.classList.add('selected'); state.calcYear=this.getAttribute('data-year');
+      if(state.step3Data) renderCompliance(state.step3Data);
+    };
+  });
 
   function calcEmission() {
-    var selfUse = parseFloat($('emi-selfUse').value) || 0;
-    var factor = parseFloat($('emissionFactor').value) || 0;
-    var years = parseInt($('opYears').value, 10) || 25;
-    var annualTon = selfUse * factor / 1000;
-    var lifecycleTon = annualTon * years;
-    var treesWan = annualTon * 1000 / 21.8 / 10000;
-    $('annualEmission').textContent = annualTon.toFixed(1);
-    $('trees').textContent = treesWan.toFixed(2);
-    $('lifecycleEmission').textContent = (lifecycleTon / 10000).toFixed(2);
-    $('lifecycleYears').textContent = years;
-    state.emissionResult = { annualTon: annualTon, lifecycleTon: lifecycleTon, treesWan: treesWan, years: years };
+    var selfUse=state.step3Data?(state.step3Data.finalSelfUse||state.step3Data.selfUse):0;
+    var factor=num($('emissionFactor').value), years=parseInt($('opYears').value,10)||25;
+    var annual=selfUse*factor/1000, life=annual*years, trees=annual*1000/21.8/10000;
+    $('emi-selfUse').value=selfUse.toFixed(0);
+    $('annualEmission').textContent=annual.toFixed(1);
+    $('trees').textContent=trees.toFixed(2);
+    $('lifecycleEmission').textContent=(life/10000).toFixed(2);
+    $('lifecycleYears').textContent=years;
+    state.emission={annual:annual,life:life,trees:trees,years:years,selfUse:selfUse};
   }
-  ['emissionFactor', 'opYears'].forEach(function (id) { $(id).addEventListener('input', calcEmission); });
+  ['emissionFactor','opYears'].forEach(function(id){ $(id).addEventListener('input', calcEmission); });
 
   /* ===== Summaries ===== */
-  function summaryS1() {
-    var enMap = { solar: '光伏', wind: '风电', biomass: '生物质', combo: '组合' };
-    var ens = collectEnergyTypes().map(function (e) { return enMap[e] || e; }).join('、');
-    var pt = state.projectType === 'grid' ? '并网型' : state.projectType === 'offgrid' ? '离网型' : '';
-    return ($('projectName').value || '—') + ' | ' + ($('location').value || '—') + ' | ' + ($('surveyDate').value || '—') + ' | ' + ($('reporter').value || '—') + ' | ' + pt + ' | ' + (ens || '—');
+  function sumS1() {
+    var m={solar:'光伏',wind:'风电',biomass:'生物质',combo:'组合'};
+    return ($('projectName').value||'—')+' | '+($('location').value||'—')+' | '+($('surveyDate').value||'—');
   }
-  function summaryS2() { return '已完成踏勘 ' + getSurveyDone() + '/' + getSurveyTotal() + ' 项'; }
-  function summaryS25() { return '总装机 ' + fmt(state.estimateCap || 0) + ' kW | 总年发电量 ' + fmt(state.estimateGen || 0) + ' kWh'; }
-  function summaryS3() {
-    var d = calcStep3();
-    return '年可用发电量 ' + fmt(d.annualGen) + ' kWh | 用户数 ' + state.users.length + ' 个 | 年总用电量 ' + fmt(d.totalLoad) + ' kWh';
-  }
-  function summaryS4() {
-    var cr = state.complianceResult;
-    if (!cr) return '';
-    return '指标一 ' + pct(cr.r1) + ' ' + (cr.p1 ? '✅' : '❌') + ' | 指标二 ' + pct(cr.r2) + ' ' + (cr.p2 ? '✅' : '❌') + ' | 指标三 ' + pct(cr.r3) + ' ' + (cr.p3 ? '✅' : '❌');
-  }
-  function summaryS5() {
-    calcEmission();
-    var er = state.emissionResult;
-    if (!er) return '';
-    return '年减排 ' + er.annualTon.toFixed(1) + ' 吨CO₂ | 全周期 ' + (er.lifecycleTon / 10000).toFixed(2) + ' 万吨';
-  }
+  function sumS2() { updateSiteTotals(); return '踏勘 '+getSurveyDone()+'/'+getSurveyTotal()+'项 · 装机 '+$('site-total-cap').textContent+' kW'; }
+  function sumS3() { return '年发电 '+$('s3-total-gen').textContent+' kWh · 用户 '+state.users.length+'个'; }
+  function sumS4() { var c=state.compliance; return c?('指标 '+pct(c.r1)+'/' +pct(c.r2)+'/'+pct(c.r3)) : ''; }
+  function sumS5() { calcEmission(); return state.emission?('年减排 '+state.emission.annual.toFixed(1)+'吨'):''; }
 
-  /* ===== Next buttons ===== */
+  /* ===== Navigation ===== */
   function handleNext(from) {
-    if (from === 's1') {
-      if (!$('projectName').value.trim()) { alert('请输入项目名称'); return; }
-      state.energyTypes = collectEnergyTypes();
-      collapseStep('s1', summaryS1());
-      advanceTo('s2');
-    } else if (from === 's2') {
-      state.siteTypes = collectSiteTypes();
-      collapseStep('s2', summaryS2());
-      updateEstimateSections();
-      if (needsStep25()) {
-        advanceTo('s25');
-      } else {
-        state.completed['s25'] = true;
-        if ($('sum-s25')) $('sum-s25').textContent = '已跳过';
-        show($('block-s25'));
-        $('hdr-s25').className = 'step-header collapsed';
-        $('cnt-s25').classList.add('collapsed');
-        renderProgress();
-        advanceTo('s3');
-      }
-    } else if (from === 's25') {
-      updateEstimateTotals();
-      collapseStep('s25', summaryS25());
-      advanceTo('s3');
-    } else if (from === 's3') {
-      var d = calcStep3();
-      if (!d.annualGen || d.annualGen <= 0) { alert('请填写有效的发电侧数据'); return; }
-      if (!d.totalLoad || d.totalLoad <= 0) { alert('请填写有效的用电侧数据'); return; }
-      state.step3Data = d;
+    if(from==='s1') {
+      if(!$('projectName').value.trim()){alert('请输入项目名称');return;}
+      collapseStep('s1', sumS1()); advanceTo('s2');
+    } else if(from==='s2') {
+      updateSiteTotals(); updateUserSummary(); updateSurveyProgress();
+      collapseStep('s2', sumS2()); renderStep3(); advanceTo('s3');
+    } else if(from==='s3') {
+      renderStep3();
+      var d=state.step3;
+      d.finalSelfUse=d.finalSelfUse||d.selfUse; d.finalGridFeed=d.finalGridFeed||d.gridFeed;
+      d.totals=calcGenTotals(); d.selfUse=d.finalSelfUse; d.gridFeed=d.finalGridFeed;
+      state.step3Data=d;
       renderCompliance(d);
-      collapseStep('s3', summaryS3());
-      advanceTo('s4');
-    } else if (from === 's4') {
-      collapseStep('s4', summaryS4());
-      $('emi-selfUse').value = state.step3Data.selfUse.toFixed(0);
-      calcEmission();
-      advanceTo('s5');
+      collapseStep('s3', sumS3()); advanceTo('s4');
+    } else if(from==='s4') {
+      collapseStep('s4', sumS4()); calcEmission(); advanceTo('s5');
     }
   }
 
-  var nextBtns = document.querySelectorAll('.btn-next');
-  for (var n = 0; n < nextBtns.length; n++) {
-    nextBtns[n].addEventListener('click', function () {
-      handleNext(this.getAttribute('data-from'));
-    });
-  }
-
-  $('import-s3').addEventListener('click', function () {
-    updateEstimateTotals();
-    state.fromEstimate = true;
-    $('capacity').value = (state.estimateCap || 0).toFixed(2);
-    $('capacity').classList.add('input-highlight');
-    show($('cap-badge'));
-    var cap = state.estimateCap || 0;
-    var rate = parseFloat($('auxRate').value) || 5;
-    if (cap > 0 && state.estimateGen > 0) {
-      $('hours').value = (state.estimateGen / (cap * (1 - rate / 100))).toFixed(0);
-    }
-    calcStep3();
-    collapseStep('s25', summaryS25());
-    advanceTo('s3');
+  document.querySelectorAll('.btn-next').forEach(function(btn){
+    btn.onclick=function(){ handleNext(this.getAttribute('data-from')); };
   });
 
   /* ===== Report ===== */
-  function renderReport() {
-    var d = state.step3Data || calcStep3();
-    var cr = state.complianceResult, er = state.emissionResult;
-    var enMap = { solar: '光伏', wind: '风电', biomass: '生物质', combo: '组合' };
-    $('report-meta').innerHTML = '项目名称：' + ($('projectName').value || '—') + '<br>所在地区：' + ($('location').value || '—') + '<br>踏勘日期：' + ($('surveyDate').value || '—') + '<br>填报人：' + ($('reporter').value || '—');
-    var html = '';
-    html += '<div class="report-section"><h3>【现场踏勘】</h3><p>' + summaryS2() + '</p></div>';
-    html += '<div class="report-section"><h3>【资源评估】</h3><ul><li>装机：' + fmt(parseFloat($('capacity').value) || 0) + ' kW</li><li>利用小时：' + ($('hours').value || '—') + ' h</li><li>年可用发电量：' + fmt(d.annualGen) + ' kWh</li></ul></div>';
-    html += '<div class="report-section"><h3>【负荷摸底】</h3><ul><li>用户数：' + state.users.length + ' 个</li><li>年总用电量：' + fmt(d.totalLoad) + ' kWh</li></ul></div>';
-    if (cr) {
-      html += '<div class="report-section"><h3>【合规测算】</h3><ul><li>指标一：' + pct(cr.r1) + ' ' + (cr.p1 ? '✅' : '❌') + '</li><li>指标二：' + pct(cr.r2) + ' ' + (cr.p2 ? '✅' : '❌') + '</li><li>指标三：' + pct(cr.r3) + ' ' + (cr.p3 ? '✅' : '❌') + '</li><li>综合：' + (cr.allPass ? '均达标' : cr.failCount + '项未达标') + '</li></ul></div>';
-    }
-    if (er) {
-      html += '<div class="report-section"><h3>【减排效益】</h3><ul><li>年减排：' + er.annualTon.toFixed(1) + ' 吨CO₂</li><li>全周期：' + (er.lifecycleTon / 10000).toFixed(2) + ' 万吨CO₂</li><li>等效植树：' + er.treesWan.toFixed(2) + ' 万棵/年</li></ul></div>';
-    }
-    if (cr && !cr.allPass) {
-      html += '<div class="report-section"><h3>【整改建议】</h3><ul>';
-      if (!cr.p1 || !cr.p2) html += '<li>指标一/二：需增加自发自用约 ' + fmt(cr.needSelfUse) + ' kWh</li>';
-      if (!cr.p3) html += '<li>指标三：需减少上网电量约 ' + fmt(cr.needReduce) + ' kWh</li>';
-      html += '</ul></div>';
-    }
-    $('report-body').innerHTML = html;
+  function getUncheckedLabels() {
+    var labels=[], els=document.querySelectorAll('.sv-check,.sv-check2');
+    for(var i=0;i<els.length;i++) if(!els[i].checked) labels.push(els[i].nextElementSibling.textContent);
+    return labels;
   }
 
-  $('gen-report').addEventListener('click', function () {
+  function renderReport() {
     calcEmission();
-    collapseStep('s5', summaryS5());
-    renderReport();
-    $('report').classList.add('visible');
-    $('report').scrollIntoView({ behavior: 'smooth' });
-  });
+    var d=state.step3Data, c=state.compliance, e=state.emission, t=calcGenTotals();
+    var enMap={solar:'光伏',wind:'风电',biomass:'生物质',combo:'组合'};
+    var ens=energyTypes().map(function(x){return enMap[x];}).join('、');
+    $('report-meta').innerHTML='<strong>【基本信息】</strong><br>项目名称：'+($('projectName').value||'—')+'<br>省份/城市：'+($('location').value||'—')+'<br>踏勘日期：'+($('surveyDate').value||'—')+'<br>填报人：'+($('reporter').value||'—')+'<br>项目类型：'+(state.projectType==='grid'?'并网型':'离网型')+'<br>新能源类型：'+ens;
 
-  $('export-pdf').addEventListener('click', function () { window.print(); });
+    var body='';
+    body+=collHTML('【现场踏勘情况】','完成进度：'+getSurveyDone()+'/'+getSurveyTotal()+'项','<p>完成进度：'+getSurveyDone()+'/'+getSurveyTotal()+'项</p>');
+    body+=collHTML('【拟安装场地权属】','权属人：'+($('rights-owner').value||'—'),'<p>权属人：'+($('rights-owner').value||state.rights.owner||'—')+'<br>权属关系：'+($('rights-relation').value||state.rights.relation||'—')+'<br>产权证：'+(state.rights.certType||'—')+'</p>');
+    body+=collHTML('【电源装机估算】','总装机 '+fmt(t.cap)+'kW','<p>总装机：'+fmt(t.cap)+' kW<br>总年发电量：'+fmt(t.gen)+' kWh</p>');
+    body+=collHTML('【用电侧信息】',state.users.length+'个用户','<p>用户总数：'+state.users.length+'个<br>总负荷：'+fmt(state.userSummary.totalLoad)+' kW<br>年总用电量：'+fmt(state.userSummary.totalAnnual)+' kWh</p>');
+    body+=collHTML('【发用电对比】',$('s3-prelim-rate').textContent||'—','<canvas id="report-chart" height="200"></canvas><p>初步自发自用率：'+($('s3-prelim-rate').textContent||'—')+'</p>');
+    if(c) body+=collHTML('【合规比例测算】',(c.allPass?'均达标':c.failCount+'项未达标'),'<p>指标一：'+pct(c.r1)+(c.p1?'✅':'❌')+'<br>指标二：'+pct(c.r2)+(c.p2?'✅':'❌')+'<br>指标三：'+pct(c.r3)+(c.p3?'✅':'❌')+'<br>政策依据：发改能源〔2026〕688号第二条</p>');
+    if(e) body+=collHTML('【减排效益】',e.annual.toFixed(1)+'吨CO₂/年','<p>年减排：'+e.annual.toFixed(1)+' 吨CO₂/年<br>全周期：'+(e.life/10000).toFixed(2)+' 万吨CO₂<br>等效植树：'+e.trees.toFixed(2)+' 万棵/年</p>');
+    if(c&&!c.allPass) {
+      var fixInner='<ul>';
+      if(!c.p1||!c.p2) fixInner+='<li>增加自发自用约 '+fmt(c.needSelfUse)+' kWh</li>';
+      if(!c.p3) fixInner+='<li>减少上网电量约 '+fmt(c.needReduce)+' kWh</li>';
+      fixInner+='</ul>';
+      body+=collHTML('【整改建议】','',fixInner);
+    }
+    body+=collHTML('【免责声明】','','<p>源流·基于发改能源〔2026〕688号 · 仅供参考，不构成法律意见<br>本报告数据来源于用户填写，实际以专业机构勘测为准</p>');
+    $('report-body').innerHTML=body;
+    bindCollapsibles($('report-body'));
+    if(state.step3) renderChart('report-chart', state.step3.genSlots, state.step3.loadSlots);
+  }
 
-  $('reset-calc').addEventListener('click', function () {
-    $('report').classList.remove('visible');
-    state.fromEstimate = false;
-    state.complianceResult = null;
-    $('capacity').value = ''; $('hours').value = ''; $('auxRate').value = '5';
-    $('capacity').classList.remove('input-highlight');
-    hide($('cap-badge'));
-    state.users = [{ name: '', power: 0, hours: 0 }];
-    renderUserTable(); calcStep3();
-    expandStep('s3');
-  });
+  $('gen-report').onclick=function(){ renderReport(); collapseStep('s5', sumS5()); show($('report')); $('report').scrollIntoView({behavior:'smooth'}); };
+  $('export-pdf').onclick=function(){ window.print(); };
+  $('reset-calc').onclick=function(){ hide($('report')); expandStep('s3'); };
 
   /* ===== Init ===== */
-  bindStepHeaders();
-  renderProgress();
-  renderSurveyList();
-  renderUserTable();
-  initDateWheel();
+  bindHeaders(); bindCollapsibles(document); renderProgress(); renderPowerSurvey(); renderComplySurvey();
+  renderUsers(); updateDateDisplay(); updateRefHints(); updateRightsSummary(); updateStorageSummary(); bindCollapsibles(document);
+  var now=new Date(); state.dateY=now.getFullYear(); state.dateM=now.getMonth()+1; state.dateD=now.getDate(); updateDateDisplay();
 
 })();
 
-  </script>
+</script>
 </body>
 </html>
