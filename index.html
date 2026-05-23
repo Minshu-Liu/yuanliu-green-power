@@ -196,10 +196,17 @@
     .collapsible-header.open + .collapsible-content { max-height: 3000px; }
     .collapsible-header.open .arrow { transform: rotate(180deg); }
     .collapsible-inner { padding: 12px 0 4px; }
+    .collapsible-child {
+      margin-left: 0;
+      padding-left: 0;
+      border-left: 2px solid #4a9ebb;
+      margin-bottom: 2px;
+    }
     .collapsible-child .collapsible-header {
       margin-left: 16px;
       border-left: 2px solid #4a9ebb;
-      background: #0d2336;
+      background: #0a1e30;
+      font-size: 13px;
     }
     .collapsible-child .collapsible-header:hover {
       background: #102840;
@@ -343,7 +350,7 @@
           <div class="collapsible-content"><div class="collapsible-inner"><div id="power-survey"></div></div></div>
         </div>
         <div class="collapsible-wrap">
-          <div class="collapsible-header" id="coll-users-hdr"><span class="header-title">用电用户信息</span><span class="header-right"><span class="header-summary" id="coll-users-sum"></span><span class="arrow">▼</span></span></div>
+          <div class="collapsible-header" id="coll-users-hdr"><span class="header-title">用电客户</span><span class="header-right"><span class="header-summary" id="coll-users-sum"></span><span class="arrow">▼</span></span></div>
           <div class="collapsible-content"><div class="collapsible-inner">
         <div id="users-container"></div>
         <button type="button" class="btn-add" id="add-user">+ 添加用户</button>
@@ -489,7 +496,8 @@
       if (t.tagName === 'A') return;
       if (t.tagName === 'INPUT') return;
       if (t.tagName === 'SELECT') return;
-      if (t.closest && t.closest('.collapsible-content')) return;
+      var ownContent = this.nextElementSibling;
+      if (ownContent && ownContent.classList.contains('collapsible-content') && t.closest && t.closest('.collapsible-content') === ownContent) return;
       this.classList.toggle('open');
     });
   }
@@ -759,7 +767,6 @@
       var r=state.roofs[i], c=calcRoof(r);
       totalCap+=c.cap; totalGen+=c.gen;
       var roofInner='';
-      if(state.roofs.length>1) roofInner+='<div style="text-align:right;margin-bottom:8px;"><button type="button" class="btn-sm del-roof" data-i="'+i+'">删除</button></div>';
       roofInner+='<div class="field-row"><label>屋顶类型</label><div class="mini-cards">';
       for(var t=0;t<ROOF_TYPES.length;t++) {
         var rt=ROOF_TYPES[t];
@@ -782,7 +789,11 @@
       roofInner+='<p class="hint-sm">建议使用 <a href="https://solargis.com/maps-and-gis-data/overview" target="_blank" rel="noopener">Solargis</a> 获取数据</p></div>';
       roofInner+='<div class="calc-box">①可用面积='+c.ua.toFixed(1)+'m² ②装机='+c.cap.toFixed(2)+'kW ③有效小时='+c.effHours.toFixed(0)+'h<br>④年发电量='+fmt(c.gen)+' kWh</div>';
       var sum = c.cap>0 ? ('装机 '+c.cap.toFixed(2)+'kW · 年发电 '+fmt(c.gen)+' kWh') : '';
-      html+=collHTML('屋顶 '+(i+1), sum, roofInner);
+      var delBtn = state.roofs.length>1 ? '<button class="roof-del-btn" data-i="'+i+'" style="background:none;border:none;color:#8fa8c0;font-size:16px;cursor:pointer;padding:0 4px;" onmouseover="this.style.color=\'#e05c5c\'" onmouseout="this.style.color=\'#8fa8c0\'">×</button>' : '';
+      html+='<div class="collapsible-wrap">'+
+        '<div class="collapsible-header"><span class="header-title">屋顶 '+(i+1)+'</span>'+
+        '<span class="header-right"><span class="header-summary">'+sum+'</span>'+delBtn+'<span class="arrow">▼</span></span></div>'+
+        '<div class="collapsible-content"><div class="collapsible-inner">'+roofInner+'</div></div></div>';
     }
     box.innerHTML=html;
     bindRoofEvents();
@@ -804,7 +815,7 @@
       el.onclick=function(){ var i=parseInt(this.getAttribute('data-i'),10), o=this.getAttribute('data-o');
         state.roofs[i].orientation=o; for(var j=0;j<ORIENTATIONS.length;j++) if(ORIENTATIONS[j].id===o) state.roofs[i].orientCoef=ORIENTATIONS[j].coef; renderRoofs(); updateSiteTotals(); };
     });
-    document.querySelectorAll('.del-roof').forEach(function(el){
+    document.querySelectorAll('.roof-del-btn').forEach(function(el){
       el.onclick=function(e){ e.stopPropagation(); state.roofs.splice(parseInt(this.getAttribute('data-i'),10),1); renderRoofs(); updateSiteTotals(); };
     });
   }
